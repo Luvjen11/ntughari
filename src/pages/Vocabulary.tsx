@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Volume2, Heart, ArrowLeft, BookOpen } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
 import { Link } from "react-router-dom";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useSavedWords } from "@/hooks/useSavedWords";
+import { useAuth } from "@/hooks/useAuth";
 
 interface VocabCategory {
   id: string;
@@ -26,7 +27,8 @@ interface VocabWord {
 export default function Vocabulary() {
   const { speak } = useTTS();
   const [selectedCategory, setSelectedCategory] = useState<VocabCategory | null>(null);
-  const [savedWords, setSavedWords] = useLocalStorage<string[]>("my-words", []);
+  const { savedWords, toggleSaveWord, isWordSaved, isLoggedIn } = useSavedWords();
+  const { user } = useAuth();
 
   const { data: categories, isLoading: loadingCategories } = useQuery({
     queryKey: ["vocab_categories"],
@@ -53,14 +55,6 @@ export default function Vocabulary() {
     },
     enabled: !!selectedCategory,
   });
-
-  const toggleSaveWord = (wordId: string) => {
-    setSavedWords((prev) =>
-      prev.includes(wordId)
-        ? prev.filter((id) => id !== wordId)
-        : [...prev, wordId]
-    );
-  };
 
   if (loadingCategories) {
     return (
@@ -103,6 +97,19 @@ export default function Vocabulary() {
                 Choose a category to start learning words
               </p>
             </div>
+
+            {/* Sign-in prompt for guests */}
+            {!isLoggedIn && savedWords.length > 0 && (
+              <div className="brutal-card bg-secondary/30 border-secondary p-4 mb-6 max-w-2xl">
+                <p className="text-sm">
+                  <span className="font-semibold">💡 Tip:</span> You have {savedWords.length} saved word{savedWords.length > 1 ? 's' : ''} stored locally.{' '}
+                  <Link to="/auth" className="font-semibold text-primary hover:underline">
+                    Sign in
+                  </Link>{' '}
+                  to save them permanently and access from any device.
+                </p>
+              </div>
+            )}
 
             {/* Categories Grid */}
             {categories && categories.length > 0 ? (
@@ -178,11 +185,11 @@ export default function Vocabulary() {
                         <button
                           onClick={() => toggleSaveWord(word.id)}
                           className={`p-2 rounded-lg border-2 border-foreground transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5
-                            ${savedWords.includes(word.id) ? "bg-secondary" : "bg-card hover:bg-muted"}`}
+                            ${isWordSaved(word.id) ? "bg-secondary" : "bg-card hover:bg-muted"}`}
                         >
                           <Heart
                             size={18}
-                            fill={savedWords.includes(word.id) ? "currentColor" : "none"}
+                            fill={isWordSaved(word.id) ? "currentColor" : "none"}
                           />
                         </button>
                         <button
