@@ -1,6 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const navLinks = [
   { to: "/alphabet", label: "Alphabet" },
@@ -12,6 +14,12 @@ const navLinks = [
 export function Navigation() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsOpen(false);
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-background border-b-3 border-foreground">
@@ -40,6 +48,32 @@ export function Navigation() {
                 {link.label}
               </Link>
             ))}
+            
+            {/* Auth Button */}
+            {!loading && (
+              user ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="ml-2 border-2 border-foreground font-display font-semibold"
+                >
+                  <LogOut size={16} className="mr-1" />
+                  Sign Out
+                </Button>
+              ) : (
+                <Link to="/auth">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2 border-2 border-foreground font-display font-semibold bg-secondary hover:bg-secondary/80"
+                  >
+                    <User size={16} className="mr-1" />
+                    Sign In
+                  </Button>
+                </Link>
+              )
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -69,6 +103,28 @@ export function Navigation() {
                   {link.label}
                 </Link>
               ))}
+              
+              {/* Mobile Auth Button */}
+              {!loading && (
+                user ? (
+                  <button
+                    onClick={handleSignOut}
+                    className="px-4 py-3 font-display font-semibold rounded-lg border-2 border-foreground bg-card hover:bg-muted flex items-center gap-2"
+                  >
+                    <LogOut size={18} />
+                    Sign Out
+                  </button>
+                ) : (
+                  <Link
+                    to="/auth"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-3 font-display font-semibold rounded-lg border-2 border-foreground bg-secondary hover:bg-secondary/80 flex items-center gap-2"
+                  >
+                    <User size={18} />
+                    Sign In
+                  </Link>
+                )
+              )}
             </div>
           </div>
         )}
