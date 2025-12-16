@@ -6,6 +6,7 @@ import { useTTS } from "@/hooks/useTTS";
 import { Link } from "react-router-dom";
 import { useSavedWords } from "@/hooks/useSavedWords";
 import { useAuth } from "@/hooks/useAuth";
+import { CultureNote } from "@/components/CultureNote";
 
 interface VocabCategory {
   id: string;
@@ -22,6 +23,7 @@ interface VocabWord {
   english_translation: string;
   example_sentence_igbo: string | null;
   example_sentence_english: string | null;
+  cultural_note: string | null;
 }
 
 export default function Vocabulary() {
@@ -212,6 +214,10 @@ export default function Vocabulary() {
                           </p>
                         )}
                       </div>
+                    )}
+
+                    {word.cultural_note && (
+                      <CultureNote note={word.cultural_note} />
                     )}
                   </div>
                 ))}

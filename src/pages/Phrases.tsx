@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Volume2, Puzzle, Check, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTTS } from "@/hooks/useTTS";
+import { CultureNote } from "@/components/CultureNote";
 
 interface Phrase {
   id: string;
   igbo_phrase: string;
   english_translation: string;
   order_index: number;
+  cultural_note: string | null;
 }
 
 interface PhrasePart {
@@ -190,6 +192,10 @@ export default function Phrases() {
                     <span>Play</span>
                   </button>
                 </div>
+
+                {selectedPhrase.cultural_note && (
+                  <CultureNote note={selectedPhrase.cultural_note} />
+                )}
               </div>
 
               {/* Breakdown */}

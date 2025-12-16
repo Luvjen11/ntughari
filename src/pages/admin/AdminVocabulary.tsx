@@ -34,6 +34,7 @@ type VocabWord = {
   category_id: string;
   example_sentence_igbo: string | null;
   example_sentence_english: string | null;
+  cultural_note: string | null;
 };
 
 type Category = {
@@ -52,6 +53,7 @@ export default function AdminVocabulary() {
     category_id: "",
     example_sentence_igbo: "",
     example_sentence_english: "",
+    cultural_note: "",
   });
 
   const { data: words, isLoading } = useQuery({
@@ -80,6 +82,7 @@ export default function AdminVocabulary() {
         category_id: data.category_id,
         example_sentence_igbo: data.example_sentence_igbo || null,
         example_sentence_english: data.example_sentence_english || null,
+        cultural_note: data.cultural_note || null,
       });
       if (error) throw error;
     },
@@ -100,6 +103,7 @@ export default function AdminVocabulary() {
         category_id: data.category_id,
         example_sentence_igbo: data.example_sentence_igbo || null,
         example_sentence_english: data.example_sentence_english || null,
+        cultural_note: data.cultural_note || null,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -125,7 +129,7 @@ export default function AdminVocabulary() {
     onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
   });
 
-  const resetForm = () => setFormData({ igbo_word: "", english_translation: "", category_id: "", example_sentence_igbo: "", example_sentence_english: "" });
+  const resetForm = () => setFormData({ igbo_word: "", english_translation: "", category_id: "", example_sentence_igbo: "", example_sentence_english: "", cultural_note: "" });
 
   const handleEdit = (word: VocabWord) => {
     setEditingWord(word);
@@ -135,6 +139,7 @@ export default function AdminVocabulary() {
       category_id: word.category_id,
       example_sentence_igbo: word.example_sentence_igbo || "",
       example_sentence_english: word.example_sentence_english || "",
+      cultural_note: word.cultural_note || "",
     });
     setIsDialogOpen(true);
   };
@@ -196,6 +201,10 @@ export default function AdminVocabulary() {
               <div>
                 <Label htmlFor="example_english">Example (English)</Label>
                 <Input id="example_english" value={formData.example_sentence_english} onChange={(e) => setFormData({ ...formData, example_sentence_english: e.target.value })} className="border-2 border-foreground" />
+              </div>
+              <div>
+                <Label htmlFor="cultural_note">Culture Note (optional)</Label>
+                <Input id="cultural_note" value={formData.cultural_note} onChange={(e) => setFormData({ ...formData, cultural_note: e.target.value })} className="border-2 border-foreground" placeholder="e.g., Often used in informal settings..." />
               </div>
               <Button type="submit" className="brutal-button bg-secondary w-full" disabled={createMutation.isPending || updateMutation.isPending}>
                 {editingWord ? "Update" : "Create"}

@@ -35,6 +35,7 @@ type Skeleton = {
   example_igbo: string;
   example_english: string;
   order_index: number;
+  cultural_note: string | null;
 };
 
 export default function AdminSkeletons() {
@@ -49,6 +50,7 @@ export default function AdminSkeletons() {
     example_igbo: "",
     example_english: "",
     order_index: 0,
+    cultural_note: "",
   });
 
   const { data: skeletons, isLoading } = useQuery({
@@ -69,6 +71,7 @@ export default function AdminSkeletons() {
         example_igbo: data.example_igbo,
         example_english: data.example_english,
         order_index: data.order_index,
+        cultural_note: data.cultural_note || null,
       });
       if (error) throw error;
     },
@@ -90,6 +93,7 @@ export default function AdminSkeletons() {
         example_igbo: data.example_igbo,
         example_english: data.example_english,
         order_index: data.order_index,
+        cultural_note: data.cultural_note || null,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -115,7 +119,7 @@ export default function AdminSkeletons() {
     onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
   });
 
-  const resetForm = () => setFormData({ name: "", structure: "", explanation: "", example_igbo: "", example_english: "", order_index: 0 });
+  const resetForm = () => setFormData({ name: "", structure: "", explanation: "", example_igbo: "", example_english: "", order_index: 0, cultural_note: "" });
 
   const handleEdit = (skeleton: Skeleton) => {
     setEditingSkeleton(skeleton);
@@ -126,6 +130,7 @@ export default function AdminSkeletons() {
       example_igbo: skeleton.example_igbo,
       example_english: skeleton.example_english,
       order_index: skeleton.order_index,
+      cultural_note: skeleton.cultural_note || "",
     });
     setIsDialogOpen(true);
   };
@@ -180,6 +185,10 @@ export default function AdminSkeletons() {
               <div>
                 <Label htmlFor="order_index">Order</Label>
                 <Input id="order_index" type="number" value={formData.order_index} onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })} className="border-2 border-foreground" />
+              </div>
+              <div>
+                <Label htmlFor="cultural_note">Culture Note (optional)</Label>
+                <Input id="cultural_note" value={formData.cultural_note} onChange={(e) => setFormData({ ...formData, cultural_note: e.target.value })} className="border-2 border-foreground" placeholder="e.g., This structure is common in proverbs..." />
               </div>
               <Button type="submit" className="brutal-button bg-primary w-full" disabled={createMutation.isPending || updateMutation.isPending}>
                 {editingSkeleton ? "Update" : "Create"}
