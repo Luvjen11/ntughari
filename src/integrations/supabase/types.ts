@@ -201,35 +201,118 @@ export type Database = {
         }
         Relationships: []
       }
-      story_scenes: {
+      stories: {
         Row: {
           created_at: string
+          description: string | null
           id: string
-          is_active: boolean
+          is_published: boolean
           language_code: string
-          narration_text: string
           order_index: number
           title: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
-          is_active?: boolean
+          is_published?: boolean
           language_code?: string
-          narration_text: string
           order_index?: number
           title: string
         }
         Update: {
           created_at?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          language_code?: string
+          order_index?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      story_scene_vocab: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          scene_id: string
+          vocab_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          scene_id: string
+          vocab_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          scene_id?: string
+          vocab_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_scene_vocab_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "story_scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_scene_vocab_vocab_id_fkey"
+            columns: ["vocab_id"]
+            isOneToOne: false
+            referencedRelation: "vocabulary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_scenes: {
+        Row: {
+          created_at: string
+          cultural_note: string | null
+          id: string
+          is_active: boolean
+          language_code: string
+          narration_text: string
+          order_index: number
+          story_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          cultural_note?: string | null
+          id?: string
+          is_active?: boolean
+          language_code?: string
+          narration_text: string
+          order_index?: number
+          story_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          cultural_note?: string | null
           id?: string
           is_active?: boolean
           language_code?: string
           narration_text?: string
           order_index?: number
+          story_id?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "story_scenes_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_progress: {
         Row: {
