@@ -147,31 +147,9 @@ export default function Alphabet() {
           </div>
         )}
 
-        {/* Letter Grid */}
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 gap-3 mb-8">
-          {letters.map((letter) => (
-            <button
-              key={letter.id}
-              onClick={() => {
-                setSelectedLetter(letter);
-                speak(letter.character);
-              }}
-              className={`brutal-card p-4 flex items-center justify-center aspect-square transition-all
-                ${selectedLetter?.id === letter.id 
-                  ? "bg-primary" 
-                  : "bg-card hover:bg-muted"
-                }`}
-            >
-              <span className="font-display text-2xl md:text-3xl font-bold">
-                {letter.character}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Selected Letter Detail */}
+        {/* Selected Letter Detail - NOW ABOVE THE GRID */}
         {selectedLetter && (
-          <div className="brutal-card bg-card p-6 md:p-8 animate-bounce-in max-w-2xl">
+          <div className="brutal-card bg-card p-6 md:p-8 animate-fade-in max-w-2xl mb-8">
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="font-display text-5xl md:text-6xl font-bold mb-2">
@@ -231,6 +209,28 @@ export default function Alphabet() {
             )}
           </div>
         )}
+
+        {/* Letter Grid */}
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 gap-3">
+          {letters.map((letter) => (
+            <button
+              key={letter.id}
+              onClick={() => {
+                setSelectedLetter(letter);
+                speak(letter.character);
+              }}
+              className={`brutal-card p-4 flex items-center justify-center aspect-square transition-all
+                ${selectedLetter?.id === letter.id 
+                  ? "bg-primary" 
+                  : "bg-card hover:bg-muted"
+                }`}
+            >
+              <span className="font-display text-2xl md:text-3xl font-bold">
+                {letter.character}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

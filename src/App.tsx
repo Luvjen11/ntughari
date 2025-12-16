@@ -19,6 +19,7 @@ import AdminSkeletons from "./pages/admin/AdminSkeletons";
 import AdminPhrases from "./pages/admin/AdminPhrases";
 import AdminStories from "./pages/admin/AdminStories";
 import AdminStoryScenes from "./pages/admin/AdminStoryScenes";
+import AdminCategories from "./pages/admin/AdminCategories";
 import PracticeHub from "./pages/practice/PracticeHub";
 import TranslationPractice from "./pages/practice/TranslationPractice";
 import FillGapPractice from "./pages/practice/FillGapPractice";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/letters" element={<AdminRoute><AdminLetters /></AdminRoute>} />
             <Route path="/admin/vocabulary" element={<AdminRoute><AdminVocabulary /></AdminRoute>} />
+            <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
             <Route path="/admin/skeletons" element={<AdminRoute><AdminSkeletons /></AdminRoute>} />
             <Route path="/admin/phrases" element={<AdminRoute><AdminPhrases /></AdminRoute>} />
             <Route path="/admin/stories" element={<AdminRoute><AdminStories /></AdminRoute>} />

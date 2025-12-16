@@ -1,7 +1,10 @@
-import { Languages, BookOpen, Layers, Puzzle, Heart } from "lucide-react";
+import { Languages, BookOpen, Layers, Puzzle, Play, Library } from "lucide-react";
 import { ModuleCard } from "@/components/ModuleCard";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
 const modules = [
   {
     to: "/alphabet",
@@ -34,6 +37,20 @@ const modules = [
 ];
 
 export default function Index() {
+  // Fetch Story 1 (Finding Your Voice) for the intro CTA
+  const { data: introStory } = useQuery({
+    queryKey: ["intro-story"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stories")
+        .select("id, title")
+        .eq("title", "Finding Your Voice")
+        .single();
+      if (error) return null;
+      return data;
+    },
+  });
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -45,7 +62,7 @@ export default function Index() {
           <p className="text-xl md:text-2xl text-muted-foreground font-display mb-4">
             The Bridge
           </p>
-          <div className="brutal-card bg-card p-6 md:p-8 max-w-2xl mx-auto mb-6">
+          <div className="brutal-card bg-card p-6 md:p-8 max-w-2xl mx-auto mb-8">
             <p className="text-lg text-foreground leading-relaxed">
               You understand Igbo. Now let's help you <span className="font-bold text-primary">speak</span> it. 
               Ntụgharị creates a safe, judgment-free space to practice and build confidence 
@@ -53,13 +70,28 @@ export default function Index() {
             </p>
           </div>
           
-          {/* Story CTA */}
-          <Button asChild variant="outline" className="border-2 gap-2">
-            <Link to="/stories">
-              <Heart className="h-4 w-4" />
-              Explore Stories
-            </Link>
-          </Button>
+          {/* Story CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {introStory && (
+              <Button asChild size="lg" className="gap-2 text-lg">
+                <Link to={`/story/${introStory.id}`}>
+                  <Play className="h-5 w-5" />
+                  Play Intro Story
+                </Link>
+              </Button>
+            )}
+            <Button asChild variant="outline" size="lg" className="gap-2 border-2">
+              <Link to="/stories">
+                <Library className="h-5 w-5" />
+                Explore Stories
+              </Link>
+            </Button>
+          </div>
+          {introStory && (
+            <p className="text-sm text-muted-foreground mt-3">
+              Understand why Ntụgharị exists
+            </p>
+          )}
         </div>
 
         {/* Module Cards Grid */}
