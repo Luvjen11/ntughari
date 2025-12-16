@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Check, X } from "lucide-react";
+import { IgboCharacterPad } from "./IgboCharacterPad";
 
 interface PracticeCardProps {
   prompt: string;
@@ -15,6 +16,7 @@ export function PracticeCard({ prompt, correctAnswer, hint, onAnswer }: Practice
   const [userAnswer, setUserAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
     const correct = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
@@ -29,6 +31,24 @@ export function PracticeCard({ prompt, correctAnswer, hint, onAnswer }: Practice
     setIsCorrect(false);
   };
 
+  const insertCharacter = (char: string) => {
+    const input = inputRef.current;
+    if (!input) return;
+    
+    const start = input.selectionStart ?? userAnswer.length;
+    const end = input.selectionEnd ?? userAnswer.length;
+    const newValue = userAnswer.slice(0, start) + char + userAnswer.slice(end);
+    
+    setUserAnswer(newValue);
+    
+    // Restore focus and cursor position after state update
+    setTimeout(() => {
+      input.focus();
+      const newPos = start + char.length;
+      input.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
   return (
     <Card className="border-2 border-border">
       <CardContent className="p-6">
@@ -39,12 +59,18 @@ export function PracticeCard({ prompt, correctAnswer, hint, onAnswer }: Practice
         
         <div className="space-y-4">
           <Input
+            ref={inputRef}
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
             placeholder="Type your answer..."
             disabled={submitted}
             onKeyDown={(e) => e.key === "Enter" && !submitted && handleSubmit()}
             className="border-2"
+          />
+          
+          <IgboCharacterPad 
+            onCharacterClick={insertCharacter} 
+            disabled={submitted} 
           />
           
           {submitted && (
