@@ -55,9 +55,9 @@ export default function Index() {
           
           {/* Story CTA */}
           <Button asChild variant="outline" className="border-2 gap-2">
-            <Link to="/story">
+            <Link to="/stories">
               <Heart className="h-4 w-4" />
-              Why Ntụgharị exists
+              Explore Stories
             </Link>
           </Button>
         </div>

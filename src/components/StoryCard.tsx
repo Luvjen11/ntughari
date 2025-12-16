@@ -7,9 +7,10 @@ import { useTTS } from "@/hooks/useTTS";
 interface StoryCardProps {
   title: string;
   narrationText: string;
+  culturalNote?: string | null;
 }
 
-export function StoryCard({ title, narrationText }: StoryCardProps) {
+export function StoryCard({ title, narrationText, culturalNote }: StoryCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showText, setShowText] = useState(true);
@@ -103,6 +104,15 @@ export function StoryCard({ title, narrationText }: StoryCardProps) {
                 {paragraph}
               </p>
             ))}
+          </div>
+        )}
+
+        {/* Cultural note */}
+        {culturalNote && (
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mt-4">
+            <p className="text-sm text-foreground/80 italic">
+              💡 {culturalNote}
+            </p>
           </div>
         )}
 

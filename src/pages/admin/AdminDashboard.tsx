@@ -7,12 +7,12 @@ export default function AdminDashboard() {
   const { data: counts, isLoading } = useQuery({
     queryKey: ["adminCounts"],
     queryFn: async () => {
-      const [letters, vocabulary, skeletons, phrases, storyScenes] = await Promise.all([
+      const [letters, vocabulary, skeletons, phrases, stories] = await Promise.all([
         supabase.from("letters").select("id", { count: "exact", head: true }),
         supabase.from("vocabulary").select("id", { count: "exact", head: true }),
         supabase.from("sentence_skeletons").select("id", { count: "exact", head: true }),
         supabase.from("phrases").select("id", { count: "exact", head: true }),
-        supabase.from("story_scenes").select("id", { count: "exact", head: true }),
+        supabase.from("stories").select("id", { count: "exact", head: true }),
       ]);
       
       return {
@@ -20,7 +20,7 @@ export default function AdminDashboard() {
         vocabulary: vocabulary.count ?? 0,
         skeletons: skeletons.count ?? 0,
         phrases: phrases.count ?? 0,
-        storyScenes: storyScenes.count ?? 0,
+        stories: stories.count ?? 0,
       };
     },
   });
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
     { title: "Vocabulary", count: counts?.vocabulary ?? 0, icon: BookOpen, to: "/admin/vocabulary", color: "bg-secondary" },
     { title: "Skeletons", count: counts?.skeletons ?? 0, icon: Layers, to: "/admin/skeletons", color: "bg-primary" },
     { title: "Phrases", count: counts?.phrases ?? 0, icon: MessageSquare, to: "/admin/phrases", color: "bg-secondary" },
-    { title: "Story", count: counts?.storyScenes ?? 0, icon: BookHeart, to: "/admin/story", color: "bg-primary" },
+    { title: "Stories", count: counts?.stories ?? 0, icon: BookHeart, to: "/admin/stories", color: "bg-primary" },
   ];
 
   return (

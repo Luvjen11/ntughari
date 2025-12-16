@@ -17,13 +17,15 @@ import AdminLetters from "./pages/admin/AdminLetters";
 import AdminVocabulary from "./pages/admin/AdminVocabulary";
 import AdminSkeletons from "./pages/admin/AdminSkeletons";
 import AdminPhrases from "./pages/admin/AdminPhrases";
-import AdminStory from "./pages/admin/AdminStory";
+import AdminStories from "./pages/admin/AdminStories";
+import AdminStoryScenes from "./pages/admin/AdminStoryScenes";
 import PracticeHub from "./pages/practice/PracticeHub";
 import TranslationPractice from "./pages/practice/TranslationPractice";
 import FillGapPractice from "./pages/practice/FillGapPractice";
 import PhraseRebuildPractice from "./pages/practice/PhraseRebuildPractice";
 import Progress from "./pages/Progress";
-import Story from "./pages/Story";
+import Stories from "./pages/Stories";
+import StoryPlayer from "./pages/StoryPlayer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,13 +50,15 @@ const App = () => (
             <Route path="/practice/fill-gap" element={<FillGapPractice />} />
             <Route path="/practice/phrase-rebuild" element={<PhraseRebuildPractice />} />
             <Route path="/progress" element={<Progress />} />
-            <Route path="/story" element={<Story />} />
+            <Route path="/stories" element={<Stories />} />
+            <Route path="/story/:storyId" element={<StoryPlayer />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/letters" element={<AdminRoute><AdminLetters /></AdminRoute>} />
             <Route path="/admin/vocabulary" element={<AdminRoute><AdminVocabulary /></AdminRoute>} />
             <Route path="/admin/skeletons" element={<AdminRoute><AdminSkeletons /></AdminRoute>} />
             <Route path="/admin/phrases" element={<AdminRoute><AdminPhrases /></AdminRoute>} />
-            <Route path="/admin/story" element={<AdminRoute><AdminStory /></AdminRoute>} />
+            <Route path="/admin/stories" element={<AdminRoute><AdminStories /></AdminRoute>} />
+            <Route path="/admin/stories/:storyId/scenes" element={<AdminRoute><AdminStoryScenes /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
