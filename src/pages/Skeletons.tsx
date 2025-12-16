@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Layers, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { CultureNote } from "@/components/CultureNote";
 
 interface SentenceSkeleton {
   id: string;
@@ -12,6 +13,7 @@ interface SentenceSkeleton {
   example_igbo: string;
   example_english: string;
   order_index: number;
+  cultural_note: string | null;
 }
 
 export default function Skeletons() {
@@ -154,6 +156,11 @@ export default function Skeletons() {
                     </p>
                   </div>
                 </div>
+
+                {/* Culture Note */}
+                {selectedSkeleton.cultural_note && (
+                  <CultureNote note={selectedSkeleton.cultural_note} />
+                )}
               </div>
             </div>
           </>

@@ -111,6 +111,7 @@ export type Database = {
       phrases: {
         Row: {
           created_at: string
+          cultural_note: string | null
           english_translation: string
           id: string
           igbo_phrase: string
@@ -118,6 +119,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cultural_note?: string | null
           english_translation: string
           id?: string
           igbo_phrase: string
@@ -125,6 +127,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cultural_note?: string | null
           english_translation?: string
           id?: string
           igbo_phrase?: string
@@ -165,6 +168,7 @@ export type Database = {
       sentence_skeletons: {
         Row: {
           created_at: string
+          cultural_note: string | null
           example_english: string
           example_igbo: string
           explanation: string | null
@@ -175,6 +179,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cultural_note?: string | null
           example_english: string
           example_igbo: string
           explanation?: string | null
@@ -185,6 +190,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cultural_note?: string | null
           example_english?: string
           example_igbo?: string
           explanation?: string | null
@@ -300,6 +306,7 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string
+          cultural_note: string | null
           english_translation: string
           example_sentence_english: string | null
           example_sentence_igbo: string | null
@@ -309,6 +316,7 @@ export type Database = {
         Insert: {
           category_id: string
           created_at?: string
+          cultural_note?: string | null
           english_translation: string
           example_sentence_english?: string | null
           example_sentence_igbo?: string | null
@@ -318,6 +326,7 @@ export type Database = {
         Update: {
           category_id?: string
           created_at?: string
+          cultural_note?: string | null
           english_translation?: string
           example_sentence_english?: string | null
           example_sentence_igbo?: string | null

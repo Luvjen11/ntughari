@@ -31,6 +31,7 @@ type Phrase = {
   igbo_phrase: string;
   english_translation: string;
   order_index: number;
+  cultural_note: string | null;
 };
 
 export default function AdminPhrases() {
@@ -42,6 +43,7 @@ export default function AdminPhrases() {
     igbo_phrase: "",
     english_translation: "",
     order_index: 0,
+    cultural_note: "",
   });
 
   const { data: phrases, isLoading } = useQuery({
@@ -59,6 +61,7 @@ export default function AdminPhrases() {
         igbo_phrase: data.igbo_phrase,
         english_translation: data.english_translation,
         order_index: data.order_index,
+        cultural_note: data.cultural_note || null,
       });
       if (error) throw error;
     },
@@ -77,6 +80,7 @@ export default function AdminPhrases() {
         igbo_phrase: data.igbo_phrase,
         english_translation: data.english_translation,
         order_index: data.order_index,
+        cultural_note: data.cultural_note || null,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -102,7 +106,7 @@ export default function AdminPhrases() {
     onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
   });
 
-  const resetForm = () => setFormData({ igbo_phrase: "", english_translation: "", order_index: 0 });
+  const resetForm = () => setFormData({ igbo_phrase: "", english_translation: "", order_index: 0, cultural_note: "" });
 
   const handleEdit = (phrase: Phrase) => {
     setEditingPhrase(phrase);
@@ -110,6 +114,7 @@ export default function AdminPhrases() {
       igbo_phrase: phrase.igbo_phrase,
       english_translation: phrase.english_translation,
       order_index: phrase.order_index,
+      cultural_note: phrase.cultural_note || "",
     });
     setIsDialogOpen(true);
   };
@@ -152,6 +157,10 @@ export default function AdminPhrases() {
               <div>
                 <Label htmlFor="order_index">Order</Label>
                 <Input id="order_index" type="number" value={formData.order_index} onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })} className="border-2 border-foreground" />
+              </div>
+              <div>
+                <Label htmlFor="cultural_note">Culture Note (optional)</Label>
+                <Input id="cultural_note" value={formData.cultural_note} onChange={(e) => setFormData({ ...formData, cultural_note: e.target.value })} className="border-2 border-foreground" placeholder="e.g., Used when greeting elders..." />
               </div>
               <Button type="submit" className="brutal-button bg-secondary w-full" disabled={createMutation.isPending || updateMutation.isPending}>
                 {editingPhrase ? "Update" : "Create"}
