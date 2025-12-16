@@ -17,6 +17,10 @@ import AdminLetters from "./pages/admin/AdminLetters";
 import AdminVocabulary from "./pages/admin/AdminVocabulary";
 import AdminSkeletons from "./pages/admin/AdminSkeletons";
 import AdminPhrases from "./pages/admin/AdminPhrases";
+import PracticeHub from "./pages/practice/PracticeHub";
+import TranslationPractice from "./pages/practice/TranslationPractice";
+import FillGapPractice from "./pages/practice/FillGapPractice";
+import PhraseRebuildPractice from "./pages/practice/PhraseRebuildPractice";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +40,10 @@ const App = () => (
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/practice" element={<PracticeHub />} />
+            <Route path="/practice/translation" element={<TranslationPractice />} />
+            <Route path="/practice/fill-gap" element={<FillGapPractice />} />
+            <Route path="/practice/phrase-rebuild" element={<PhraseRebuildPractice />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/letters" element={<AdminRoute><AdminLetters /></AdminRoute>} />
             <Route path="/admin/vocabulary" element={<AdminRoute><AdminVocabulary /></AdminRoute>} />

@@ -132,6 +132,36 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          items_practiced: Json
+          practice_type: Database["public"]["Enums"]["practice_type"]
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items_practiced?: Json
+          practice_type: Database["public"]["Enums"]["practice_type"]
+          score?: number
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items_practiced?: Json
+          practice_type?: Database["public"]["Enums"]["practice_type"]
+          score?: number
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       sentence_skeletons: {
         Row: {
           created_at: string
@@ -319,6 +349,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -447,6 +478,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      practice_type: ["translation", "fill_gap", "phrase_rebuild"],
     },
   },
 } as const
