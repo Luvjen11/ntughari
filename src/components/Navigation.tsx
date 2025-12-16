@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut, Shield, Brain } from "lucide-react";
+import { Menu, X, User, LogOut, Shield, Brain, Trophy } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -11,6 +11,7 @@ const navLinks = [
   { to: "/skeletons", label: "Skeletons" },
   { to: "/phrases", label: "Phrases" },
   { to: "/practice", label: "Practice", icon: Brain },
+  { to: "/progress", label: "Progress", icon: Trophy },
 ];
 
 export function Navigation() {
