@@ -19,6 +19,41 @@ This is the reality for millions of heritage Igbo speakers worldwide. They grew 
 
 ---
 
+## 🧠 Understanding the Problem
+
+### Receptive Bilingualism
+
+Many Igbo heritage speakers grow up hearing the language at home but responding in English or another dominant language. Over time, they develop strong listening comprehension but weak speaking and writing skills.
+
+This is known as **receptive bilingualism**: they can understand conversations, songs, jokes, and instructions in Igbo, but struggle when they try to form sentences, recall words, or speak in real time.
+
+**Common challenges:**
+- Difficulty recalling words on the spot
+- Unsure about tones and pronunciation
+- Gaps in grammar and "connector" words
+- Anxiety about making mistakes in front of family or native speakers
+
+### Why Igbo Learners Freeze
+
+| Reason | Explanation |
+|--------|-------------|
+| **Passive vs active memory** | Easier to recognize a word than pull it from memory and say it aloud. Most learners practiced listening far more than speaking. |
+| **Little forced production practice** | Parents speak to learners in Igbo but don't consistently insist on Igbo responses. The brain never builds strong "output" patterns. |
+| **Performance pressure and shame** | When learners try speaking, people often react with laughter or "say it again!" Even positive intentions can feel exposing and stressful. |
+| **Lack of visible structure** | Learners pick up phrases as "chunks" without understanding underlying grammar. They know sentences that work, but not how to build new ones. |
+| **Weak reading foundation** | Without seeing words written down, it's harder to anchor pronunciation and remember how to say things correctly. |
+
+### The Gap in Existing Apps
+
+Traditional language apps often don't match this reality. They focus on:
+- Generic vocab lists
+- Translation exercises
+- Textbook dialogues
+
+They rarely address the **emotional side of speaking** or build from the phrases and sounds the learner already knows.
+
+---
+
 ## 🎯 Who Is This For?
 
 ### Ada — The Heritage Learner
@@ -35,40 +70,199 @@ This is the reality for millions of heritage Igbo speakers worldwide. They grew 
 
 ---
 
+## 🌟 Vision
+
+To be the go-to digital "bridge" for Igbo heritage learners, helping them move from:
+
+> *"I understand, but I can't speak…"*
+
+to:
+
+> *"I can express myself in Igbo, even if it's not perfect yet."*
+
+Ntụgharị sits at the intersection of:
+- 📚 Language learning
+- 🌍 Cultural reconnection
+- 💙 Emotional safety
+- 📈 Gradual, sustainable progress
+
+### Success Criteria
+
+Ntụgharị will be considered successful if:
+- ✅ Users report feeling less anxious about speaking Igbo
+- ✅ Users can produce simple sentences in core patterns (not just repeat memorized phrases)
+- ✅ Users choose to come back regularly for short practice sessions
+- ✅ The app can support additional modules without major rewrites
+
+---
+
 ## ✨ Features
 
-### 🔤 Alphabet & Sounds
-Master the 36 letters of the Igbo alphabet, including special characters with tonal marks (ị, ọ, ụ, ṅ).
+### 🔤 Alphabet & Sound Map
 
-- **Interactive letter grid** — Tap any letter to hear its pronunciation
-- **Letter of the Day** — Featured letter rotates daily for focused practice
-- **Example words** — Each letter comes with a word demonstrating its sound
-- **Browser TTS** — Immediate audio feedback without loading delays
+**Overview:** Introduces the Igbo alphabet, including special characters and tonal variations. Connects visual spelling to sound production, building foundational pronunciation skills and confidence.
+
+**User Goal:** Learn how Igbo letters look, sound, and function inside real words.
+
+| Component | Description |
+|-----------|-------------|
+| **Alphabet Grid** | Interactive grid of all 36 letters |
+| **Letter Detail View** | Pronunciation, tips, and example words |
+| **Letter of the Day** | Featured letter rotates daily for focused practice |
+| **Audio Playback** | Hear any letter or word pronounced |
+| **Igbo Character Pad** | Tap special characters (ị, ọ, ụ, ṅ) for easy input |
+
+**Data Model:**
+- `letters` — character, pronunciation_tip, order_index
+- `letter_examples` — igbo_word, english_translation, letter_id
+
+---
 
 ### 📚 Vocabulary Builder
-Build your word bank across 4 essential categories: Daily Life, Food, Actions, and People & Family.
 
-- **20 carefully selected words** — High-frequency, family/daily-life focused
-- **Example sentences** — See each word used in context (Igbo + English)
-- **My Words** — Save words you want to remember for later practice
-- **Audio pronunciation** — Hear any word spoken aloud
+**Overview:** Provides categorized Igbo vocabulary with audio, examples, and related words. Builds the essential word bank for beginner and heritage learners.
+
+**User Goal:** Learn high-frequency vocabulary and understand how words appear in context.
+
+| Component | Description |
+|-----------|-------------|
+| **Category Grid** | Browse vocabulary by theme (Daily Life, Food, Actions, People & Family) |
+| **Word Cards** | Igbo word, translation, example sentence |
+| **My Words** | Save words for later review |
+| **Audio Button** | Hear pronunciation instantly |
+| **Cultural Notes** | Context about usage and meaning |
+
+**Data Model:**
+- `vocab_categories` — name, description, icon, order_index
+- `vocabulary` — igbo_word, english_translation, example_sentence_igbo, example_sentence_english, cultural_note, category_id
+
+---
 
 ### 🧱 Sentence Skeletons
-Learn the structural patterns that power Igbo sentences. Instead of memorizing phrases, understand *how* sentences are built.
 
-- **6 foundational patterns** — From simple statements to questions
-- **Visual structure breakdown** — See the pattern formula clearly
-- **Example sentences** — Real Igbo sentences using each pattern
-- **Grammar explanations** — Understand *why* sentences work the way they do
+**Overview:** Teaches patterns instead of memorized phrases. Users learn to swap subjects, verbs, and objects to understand structure.
+
+**User Goal:** Gain confidence in constructing sentences from basic building blocks.
+
+| Component | Description |
+|-----------|-------------|
+| **Pattern List** | Browse structural patterns |
+| **Pattern Detail** | Formula explanation + live examples |
+| **Structure Breakdown** | Visual slot-based representation |
+| **Cultural Notes** | When and how patterns are used |
+
+**Data Model:**
+- `sentence_skeletons` — name, structure, example_igbo, example_english, explanation, cultural_note, order_index
+
+---
 
 ### 🧩 Phrase-to-Pieces
-Deconstruct common phrases to understand their components, then rebuild them from memory.
 
-- **7 essential phrases** — Greetings, questions, and daily expressions
-- **Word-by-word breakdown** — See the meaning of each component
-- **Grammar notes** — Understand the function of each word
-- **Rebuild exercise** — Drag-and-drop words to reconstruct the phrase
-- **Gentle feedback** — Encouraging messages, never shame-based
+**Overview:** Breaks down familiar Igbo phrases into components and teaches structure. Helps heritage learners understand the meaning behind phrases they grew up hearing.
+
+**User Goal:** Understand how familiar phrases work internally and rebuild them confidently.
+
+| Component | Description |
+|-----------|-------------|
+| **Phrase Selection** | Browse common phrases |
+| **Word-by-Word Breakdown** | See meaning of each component |
+| **Grammar Notes** | Understand function of each word |
+| **Rebuild Exercise** | Drag-and-drop reconstruction |
+| **Gentle Feedback** | Encouraging, never shame-based |
+
+**Data Model:**
+- `phrases` — igbo_phrase, english_translation, cultural_note, order_index
+- `phrase_parts` — igbo_word, english_meaning, grammar_note, order_index, phrase_id
+
+---
+
+### 🎯 Active Recall Trainer
+
+**Overview:** A drill-based trainer that forces production instead of recognition. Users translate, fill gaps, and rebuild phrases.
+
+**User Goal:** Strengthen ability to produce Igbo, not just understand it.
+
+| Practice Type | Description |
+|---------------|-------------|
+| **Translation** | English → Igbo sentence translation |
+| **Fill the Gap** | Complete sentences with missing words |
+| **Phrase Rebuild** | Reorder shuffled tokens into correct phrase |
+
+**Features:**
+- 5 questions per session
+- Calm, non-judgmental feedback ("It's okay to be wrong")
+- Progress tracking per user
+- No timers, streaks, or leaderboards (intentionally)
+
+**Data Model:**
+- `practice_sessions` — user_id, practice_type, items_practiced (JSONB), score, total_questions, created_at
+
+---
+
+### 📖 Story Layer
+
+**Overview:** Reflective narration experience that serves as an emotional and cultural anchor. Not a game, not a traditional lesson — a bridge between understanding and speaking.
+
+**User Goal:** Connect emotionally with the learning journey and understand why language matters.
+
+| Component | Description |
+|-----------|-------------|
+| **Story Hub** | Browse available story arcs |
+| **Scene Player** | Audio narration with text toggle |
+| **Words You Met** | Vocabulary cards from each scene |
+| **Micro-Practice** | Optional single question after scenes |
+| **Progress Tracking** | Scene-by-scene completion |
+
+**Current Stories:**
+1. **Finding Your Voice** — Intro story explaining why Ntụgharị exists (5 scenes)
+2. **Speaking Is a Skill** — Teaches verbs, sentence structures, asking/responding (5 scenes)
+
+**Data Model:**
+- `stories` — title, description, order_index, is_published, language_code
+- `story_scenes` — title, narration_text, cultural_note, order_index, is_active, story_id
+- `story_scene_vocab` — scene_id, vocab_id, order_index
+
+---
+
+### 👤 User Authentication
+
+**Overview:** Lightweight authentication enabling progress tracking and personalization.
+
+**Features:**
+- Email login/signup
+- Automatic role assignment (user/admin)
+- Progress synced across sessions
+- My Words persisted to database
+
+**Data Model:**
+- `user_roles` — user_id, role (admin/user)
+- `user_progress` — user_id, module, last_accessed
+- `user_saved_words` — user_id, word_id
+
+---
+
+### 📊 Progress Dashboard
+
+**Overview:** Visual overview of learning progress and practice history.
+
+**Features:**
+- Overall score and percentage
+- Sessions completed count
+- Statistics by practice type
+- Recent session history
+
+---
+
+### ⚙️ Admin Dashboard
+
+**Overview:** Full content management system for administrators.
+
+**Capabilities:**
+- CRUD operations for all content types
+- Category management with reordering
+- Story and scene management
+- Vocabulary linking to scenes
+- Role-based access control
 
 ---
 
@@ -111,109 +305,109 @@ Ntụgharị uses a **soft neo-brutalist** design language — bold and honest, 
 | **Frontend** | React 18 + TypeScript | Type-safe, component-based UI |
 | **Styling** | Tailwind CSS | Utility-first, design system ready |
 | **Build** | Vite | Fast development and builds |
-| **Backend** | Lovable Cloud (Supabase) | Database, auth-ready infrastructure |
+| **Backend** | Lovable Cloud (Supabase) | Database, auth, edge functions |
 | **State** | React Query | Server state management |
-| **Persistence** | localStorage | Client-side data (My Words) |
 | **Audio** | Web Speech API | Browser-native TTS |
 
 ### Database Schema
 
 ```
-letters (36 records)
-├── letter_examples (36 records)
+stories
+├── story_scenes
+│   └── story_scene_vocab → vocabulary
 
-vocab_categories (4 records)
-├── vocabulary (20 records)
+letters
+├── letter_examples
 
-sentence_skeletons (6 records)
+vocab_categories
+├── vocabulary
+│   └── user_saved_words
 
-phrases (7 records)
-├── phrase_parts (20 records)
+sentence_skeletons
+
+phrases
+├── phrase_parts
+
+practice_sessions
+
+user_roles
+user_progress
 ```
 
-All tables have Row-Level Security (RLS) enabled with public read access.
+All tables have Row-Level Security (RLS) enabled with appropriate policies.
 
 ---
 
 ## 🗺 Future Roadmap
 
-### Phase 2: Voice Mirror 🎙
+### Phase 1: Voice Mirror 🎙
 - Record yourself speaking
-- Compare your pronunciation to native speakers
+- Compare pronunciation to native speakers
+- Waveform visualization
 - Track improvement over time
 
-### Phase 3: User Accounts 👤
-- Sync progress across devices
-- Personalized learning path
-- Community features
-
-### Phase 4: Spaced Repetition 🧠
+### Phase 2: Spaced Repetition 🧠
 - Smart review scheduling
 - Focus on words you struggle with
 - Optimized retention algorithms
 
-### Phase 5: AI Features 🤖
+### Phase 3: AI Features 🤖
 - Pronunciation scoring
 - Personalized corrections
 - Adaptive difficulty
+- AI-generated practice prompts
 
-### Phase 6: Community 🌍
+### Phase 4: Reflection & Emotional Mode 💭
+- Daily reflection prompts
+- Text/voice journaling
+- Mood tracking
+- Processing learning emotions
+
+### Phase 5: Community 🌍
 - Share My Words lists
 - Connect with other learners
 - Native speaker mentorship
+- Anonymous community reflections
+
+### Phase 6: Multi-Language Support 🌐
+- Yoruba, Hausa, and other underrepresented languages
+- Language-agnostic architecture already in place (`language_code` fields)
 
 ---
 
 ## 👨‍⚖️ For Hackathon Judges
 
-### Intentional MVP Scope
+### What We Built
 
-This is not a "we ran out of time" MVP. Every feature included (and excluded) was a deliberate architectural decision.
-
-#### What We Built
 ✅ Complete Alphabet module with all 36 Igbo letters  
-✅ Vocabulary system with 4 categories and 20 words  
-✅ Sentence Skeletons with 6 foundational patterns  
+✅ Vocabulary system with 4 categories and cultural notes  
+✅ Sentence Skeletons with structural patterns  
 ✅ Phrase-to-Pieces with breakdown and rebuild exercises  
-✅ Full database schema designed for scale  
+✅ Active Recall Trainer with 3 practice types  
+✅ Story Layer with 2 complete story arcs (10 scenes)  
+✅ User authentication with role-based access  
+✅ Progress tracking dashboard  
+✅ Full admin dashboard for content management  
+✅ Igbo character input pad for accessibility  
 ✅ Responsive design (mobile + desktop)  
 ✅ Dark mode support  
-✅ Loading, empty, and error states  
 
-#### What We Intentionally Deferred
+### Intentional Deferrals
 
 | Feature | Why Deferred | Architecture Ready? |
 |---------|--------------|---------------------|
-| **Recorded audio** | Asset management complexity; browser TTS provides immediate feedback | ✅ Yes — audio URLs can be added to schema |
-| **User authentication** | Not needed for core learning loop validation | ✅ Yes — Lovable Cloud has auth built-in |
-| **Voice recording** | Requires additional API integration | ✅ Yes — Voice Mirror module planned |
-| **Spaced repetition** | Algorithm refinement needs user data | ✅ Yes — Schema supports progress tracking |
-
-#### Why Browser TTS?
-
-Using the Web Speech API instead of pre-recorded audio was a strategic choice:
-
-1. **Zero latency** — Instant playback, no loading spinners
-2. **Every word** — Can pronounce any Igbo text, not just recorded phrases
-3. **Reduced complexity** — No audio file management during hackathon
-4. **Upgradeable** — Can swap to recorded audio without UI changes
-
-#### Why localStorage?
-
-Storing "My Words" in localStorage instead of requiring authentication:
-
-1. **Zero friction** — Users can start saving words immediately
-2. **Privacy first** — No account needed to learn
-3. **Demonstrates persistence** — Shows we understand state management
-4. **Migration ready** — Can sync to database when auth is added
+| **Recorded audio** | Browser TTS provides immediate feedback | ✅ Yes |
+| **Voice recording** | Requires additional API integration | ✅ Yes |
+| **Spaced repetition** | Algorithm refinement needs user data | ✅ Yes |
+| **AI scoring** | Requires external AI service integration | ✅ Yes |
 
 ### Code Quality Highlights
 
-- **Custom hooks** — `useTTS()` and `useLocalStorage()` for reusability
+- **Custom hooks** — `useTTS()`, `useAuth()`, `useSavedWords()`, `usePracticeSession()`
 - **Type safety** — Full TypeScript coverage with Supabase types
 - **Component architecture** — Small, focused, reusable components
 - **Error handling** — Graceful loading, empty, and error states
-- **Semantic HTML** — Accessible structure throughout
+- **Security** — RLS policies on all tables, role-based admin access
 - **Design system** — CSS variables + Tailwind for consistency
 
 ---
@@ -256,22 +450,31 @@ No manual configuration needed when deploying through Lovable.
 ```
 src/
 ├── components/
-│   ├── ui/              # shadcn/ui components
-│   ├── Navigation.tsx   # Top navigation bar
-│   ├── ModuleCard.tsx   # Home page module cards
-│   └── NavLink.tsx      # Navigation link component
+│   ├── ui/                    # shadcn/ui components
+│   ├── practice/              # Active Recall components
+│   ├── story/                 # Story Layer components
+│   ├── Navigation.tsx         # Top navigation
+│   ├── ModuleCard.tsx         # Home page cards
+│   └── CultureNote.tsx        # Cultural context display
 ├── hooks/
-│   ├── useTTS.ts        # Text-to-speech hook
-│   └── useLocalStorage.ts # Persistent storage hook
+│   ├── useAuth.tsx            # Authentication state
+│   ├── useTTS.ts              # Text-to-speech
+│   ├── useSavedWords.ts       # My Words functionality
+│   └── usePracticeSession.ts  # Practice tracking
 ├── pages/
-│   ├── Index.tsx        # Home page
-│   ├── Alphabet.tsx     # Alphabet & Sounds module
-│   ├── Vocabulary.tsx   # Vocabulary Builder module
-│   ├── Skeletons.tsx    # Sentence Skeletons module
-│   └── Phrases.tsx      # Phrase-to-Pieces module
+│   ├── Index.tsx              # Home page
+│   ├── Alphabet.tsx           # Alphabet module
+│   ├── Vocabulary.tsx         # Vocabulary module
+│   ├── Skeletons.tsx          # Sentence Skeletons
+│   ├── Phrases.tsx            # Phrase-to-Pieces
+│   ├── Stories.tsx            # Story hub
+│   ├── StoryPlayer.tsx        # Story playback
+│   ├── Progress.tsx           # Progress dashboard
+│   ├── practice/              # Practice modes
+│   └── admin/                 # Admin dashboard
 ├── integrations/
-│   └── supabase/        # Lovable Cloud client & types
-└── index.css            # Design system tokens
+│   └── supabase/              # Lovable Cloud client & types
+└── index.css                  # Design system tokens
 ```
 
 ---
