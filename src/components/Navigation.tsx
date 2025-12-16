@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut, Shield } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
@@ -15,6 +16,7 @@ export function Navigation() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut, loading } = useAuth();
+  const { isAdmin } = useAdmin();
 
   const handleSignOut = async () => {
     await signOut();
@@ -48,6 +50,21 @@ export function Navigation() {
                 {link.label}
               </Link>
             ))}
+            
+            {/* Admin Link */}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className={`px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all flex items-center gap-1
+                  ${location.pathname.startsWith("/admin")
+                    ? "bg-primary text-primary-foreground border-foreground shadow-brutal-sm" 
+                    : "bg-transparent border-transparent hover:bg-muted hover:border-foreground"
+                  }`}
+              >
+                <Shield size={16} />
+                Admin
+              </Link>
+            )}
             
             {/* Auth Button */}
             {!loading && (
@@ -124,6 +141,22 @@ export function Navigation() {
                     Sign In
                   </Link>
                 )
+              )}
+              
+              {/* Mobile Admin Link */}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className={`px-4 py-3 font-display font-semibold rounded-lg border-2 border-foreground flex items-center gap-2
+                    ${location.pathname.startsWith("/admin") 
+                      ? "bg-primary text-primary-foreground shadow-brutal-sm" 
+                      : "bg-card hover:bg-muted"
+                    }`}
+                >
+                  <Shield size={18} />
+                  Admin
+                </Link>
               )}
             </div>
           </div>
