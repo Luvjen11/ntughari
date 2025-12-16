@@ -1,7 +1,25 @@
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
+
+interface TTSOptions {
+  rate?: number;
+}
 
 export function useTTS() {
-  const speak = useCallback((text: string) => {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Update speaking state periodically
+  useEffect(() => {
+    const checkSpeaking = () => {
+      if ('speechSynthesis' in window) {
+        setIsSpeaking(window.speechSynthesis.speaking);
+      }
+    };
+
+    const interval = setInterval(checkSpeaking, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  const speak = useCallback((text: string, options?: TTSOptions) => {
     if (!('speechSynthesis' in window)) {
       console.warn('Text-to-speech not supported in this browser');
       return;
@@ -11,7 +29,7 @@ export function useTTS() {
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.8; // Slower for learning
+    utterance.rate = options?.rate ?? 0.8; // Slower for learning
     utterance.pitch = 1;
     utterance.volume = 1;
 
@@ -25,8 +43,19 @@ export function useTTS() {
       utterance.voice = preferredVoice;
     }
 
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
     window.speechSynthesis.speak(utterance);
   }, []);
 
-  return { speak };
+  const stop = useCallback(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  }, []);
+
+  return { speak, stop, isSpeaking };
 }

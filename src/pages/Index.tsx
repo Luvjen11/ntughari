@@ -1,6 +1,7 @@
-import { Languages, BookOpen, Layers, Puzzle } from "lucide-react";
+import { Languages, BookOpen, Layers, Puzzle, Heart } from "lucide-react";
 import { ModuleCard } from "@/components/ModuleCard";
-
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 const modules = [
   {
     to: "/alphabet",
@@ -44,13 +45,21 @@ export default function Index() {
           <p className="text-xl md:text-2xl text-muted-foreground font-display mb-4">
             The Bridge
           </p>
-          <div className="brutal-card bg-card p-6 md:p-8 max-w-2xl mx-auto">
+          <div className="brutal-card bg-card p-6 md:p-8 max-w-2xl mx-auto mb-6">
             <p className="text-lg text-foreground leading-relaxed">
               You understand Igbo. Now let's help you <span className="font-bold text-primary">speak</span> it. 
               Ntụgharị creates a safe, judgment-free space to practice and build confidence 
               in your heritage language.
             </p>
           </div>
+          
+          {/* Story CTA */}
+          <Button asChild variant="outline" className="border-2 gap-2">
+            <Link to="/story">
+              <Heart className="h-4 w-4" />
+              Why Ntụgharị exists
+            </Link>
+          </Button>
         </div>
 
         {/* Module Cards Grid */}

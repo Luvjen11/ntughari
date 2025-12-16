@@ -201,6 +201,36 @@ export type Database = {
         }
         Relationships: []
       }
+      story_scenes: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          language_code: string
+          narration_text: string
+          order_index: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language_code?: string
+          narration_text: string
+          order_index?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language_code?: string
+          narration_text?: string
+          order_index?: number
+          title?: string
+        }
+        Relationships: []
+      }
       user_progress: {
         Row: {
           created_at: string
