@@ -108,6 +108,36 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Who Are the Igbo Section */}
+      <section className="container mx-auto px-4 py-12 border-t-3 border-border">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">
+            Who are the Igbo?
+          </h2>
+          <div className="brutal-card bg-card p-6 md:p-8">
+            <div className="space-y-4 text-foreground leading-relaxed">
+              <p>
+                The <strong>Igbo</strong> (pronounced "ee-boh") are one of the largest ethnic groups in Africa, 
+                with over <strong>40 million people</strong> primarily in southeastern Nigeria. Millions more 
+                live across the diaspora — in the US, UK, Canada, and beyond.
+              </p>
+              <p>
+                Igbo is a <strong>tonal language</strong> with a rich oral tradition, proverbs, and cultural 
+                expressions that have been passed down for generations. It carries the wisdom of ancestors, 
+                the warmth of family gatherings, and the identity of a resilient people.
+              </p>
+              <p className="text-muted-foreground italic">
+                But for many children of the diaspora, the language exists in a painful gap: they understand 
+                it when spoken by parents and elders, but freeze when trying to speak it themselves.
+              </p>
+              <p className="text-primary font-semibold">
+                Ntụgharị exists to bridge that gap.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Encouragement Section */}
       <section className="container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">

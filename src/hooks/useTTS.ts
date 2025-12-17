@@ -6,6 +6,26 @@ interface TTSOptions {
 
 export function useTTS() {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Load voices (they load asynchronously in some browsers)
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+      }
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   // Update speaking state periodically
   useEffect(() => {
@@ -17,6 +37,30 @@ export function useTTS() {
 
     const interval = setInterval(checkSpeaking, 100);
     return () => clearInterval(interval);
+  }, []);
+
+  const getEnglishVoice = useCallback((availableVoices: SpeechSynthesisVoice[]) => {
+    if (availableVoices.length === 0) return null;
+
+    // Priority 1: Google English voice
+    const googleEnglish = availableVoices.find(v => 
+      v.lang.startsWith('en') && v.name.toLowerCase().includes('google')
+    );
+    if (googleEnglish) return googleEnglish;
+
+    // Priority 2: Any US or UK English voice
+    const usUkEnglish = availableVoices.find(v => 
+      v.lang === 'en-US' || v.lang === 'en-GB'
+    );
+    if (usUkEnglish) return usUkEnglish;
+
+    // Priority 3: Any English voice
+    const anyEnglish = availableVoices.find(v => v.lang.startsWith('en'));
+    if (anyEnglish) return anyEnglish;
+
+    // Fallback with warning
+    console.warn('No English voice found, using default voice');
+    return availableVoices[0];
   }, []);
 
   const speak = useCallback((text: string, options?: TTSOptions) => {
@@ -32,15 +76,14 @@ export function useTTS() {
     utterance.rate = options?.rate ?? 0.8; // Slower for learning
     utterance.pitch = 1;
     utterance.volume = 1;
+    utterance.lang = 'en-US'; // Explicitly set language as backup
 
-    // Try to find a voice that might work better for tonal languages
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => 
-      v.lang.includes('en') && v.name.includes('Google')
-    ) || voices[0];
+    // Get the best available English voice
+    const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
+    const selectedVoice = getEnglishVoice(currentVoices);
     
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
     }
 
     utterance.onstart = () => setIsSpeaking(true);
@@ -48,7 +91,7 @@ export function useTTS() {
     utterance.onerror = () => setIsSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
-  }, []);
+  }, [voices, getEnglishVoice]);
 
   const stop = useCallback(() => {
     if ('speechSynthesis' in window) {
