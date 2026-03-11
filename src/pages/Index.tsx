@@ -1,5 +1,6 @@
 import { Languages, BookOpen, Layers, Puzzle, Play, Library } from "lucide-react";
 import { ModuleCard } from "@/components/ModuleCard";
+import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -69,6 +70,8 @@ export default function Index() {
               in your heritage language.
             </p>
           </div>
+
+          <OnboardingBanner introStoryId={introStory?.id} />
           
           {/* Story CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -134,6 +137,29 @@ export default function Index() {
                 Ntụgharị exists to bridge that gap.
               </p>
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+            <Link
+              to="/vocabulary"
+              className="brutal-card bg-card p-4 border-2 border-foreground hover:border-primary transition-colors text-center"
+            >
+              <p className="font-display font-semibold text-foreground">Language &amp; dialects</p>
+              <p className="text-sm text-muted-foreground mt-1">Explore words and regional variety</p>
+            </Link>
+            <Link
+              to="/stories"
+              className="brutal-card bg-card p-4 border-2 border-foreground hover:border-primary transition-colors text-center"
+            >
+              <p className="font-display font-semibold text-foreground">Proverbs &amp; storytelling</p>
+              <p className="text-sm text-muted-foreground mt-1">Stories that carry culture</p>
+            </Link>
+            <Link
+              to="/vocabulary"
+              className="brutal-card bg-card p-4 border-2 border-foreground hover:border-primary transition-colors text-center"
+            >
+              <p className="font-display font-semibold text-foreground">Everyday phrases</p>
+              <p className="text-sm text-muted-foreground mt-1">Build your vocabulary by topic</p>
+            </Link>
           </div>
         </div>
       </section>

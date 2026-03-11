@@ -9,10 +9,14 @@ interface PracticeCardProps {
   prompt: string;
   correctAnswer: string;
   hint?: string;
+  /** Full sentence for fill-the-gap: show after submit with correct word highlighted */
+  fullSentence?: string;
+  /** Word to highlight in fullSentence (e.g. the filled-in answer) */
+  highlightWord?: string;
   onAnswer: (correct: boolean) => void;
 }
 
-export function PracticeCard({ prompt, correctAnswer, hint, onAnswer }: PracticeCardProps) {
+export function PracticeCard({ prompt, correctAnswer, hint, fullSentence, highlightWord, onAnswer }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -91,6 +95,17 @@ export function PracticeCard({ prompt, correctAnswer, hint, onAnswer }: Practice
               {!isCorrect && (
                 <p className="text-sm text-muted-foreground">
                   The answer is: <span className="font-medium text-foreground">{correctAnswer}</span>
+                </p>
+              )}
+              {fullSentence && highlightWord && submitted && (
+                <p className="text-sm mt-2">
+                  Full sentence:{" "}
+                  {fullSentence.split(highlightWord).map((part, i, arr) => (
+                    <span key={i}>
+                      {part}
+                      {i < arr.length - 1 && <mark className="bg-primary/30 font-medium rounded px-0.5">{highlightWord}</mark>}
+                    </span>
+                  ))}
                 </p>
               )}
               <p className="text-sm text-muted-foreground mt-2 italic">

@@ -1,4 +1,5 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
+import { getWords } from "@/lib/igboApi";
 
 interface TTSOptions {
   rate?: number;
@@ -7,6 +8,8 @@ interface TTSOptions {
 export function useTTS() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const igboAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isPlayingIgboRef = useRef(false);
 
   // Load voices (they load asynchronously in some browsers)
   useEffect(() => {
@@ -27,9 +30,10 @@ export function useTTS() {
     };
   }, []);
 
-  // Update speaking state periodically
+  // Update speaking state periodically for English TTS; Igbo playback uses Audio events
   useEffect(() => {
     const checkSpeaking = () => {
+      if (isPlayingIgboRef.current) return;
       if ('speechSynthesis' in window) {
         setIsSpeaking(window.speechSynthesis.speaking);
       }
@@ -93,12 +97,68 @@ export function useTTS() {
     window.speechSynthesis.speak(utterance);
   }, [voices, getEnglishVoice]);
 
+  const speakIgbo = useCallback(async (text: string) => {
+    const trimmed = text?.trim();
+    if (!trimmed) return;
+
+    // Cancel any current playback
+    window.speechSynthesis?.cancel();
+    if (igboAudioRef.current) {
+      igboAudioRef.current.pause();
+      igboAudioRef.current.currentTime = 0;
+      igboAudioRef.current = null;
+    }
+    isPlayingIgboRef.current = false;
+
+    const { words, error } = await getWords({ keyword: trimmed });
+    if (error || !words?.length) {
+      speak(trimmed);
+      return;
+    }
+
+    const first = words.find((w) => w.pronunciation);
+    if (!first?.pronunciation) {
+      speak(trimmed);
+      return;
+    }
+
+    const audio = new Audio(first.pronunciation);
+    igboAudioRef.current = audio;
+    isPlayingIgboRef.current = true;
+    setIsSpeaking(true);
+
+    audio.onended = () => {
+      isPlayingIgboRef.current = false;
+      igboAudioRef.current = null;
+      setIsSpeaking(false);
+    };
+    audio.onerror = () => {
+      isPlayingIgboRef.current = false;
+      igboAudioRef.current = null;
+      setIsSpeaking(false);
+      speak(trimmed);
+    };
+
+    audio.play().catch(() => {
+      isPlayingIgboRef.current = false;
+      igboAudioRef.current = null;
+      setIsSpeaking(false);
+      speak(trimmed);
+    });
+  }, [speak]);
+
   const stop = useCallback(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
     }
+    if (igboAudioRef.current) {
+      igboAudioRef.current.pause();
+      igboAudioRef.current.currentTime = 0;
+      igboAudioRef.current = null;
+    }
+    isPlayingIgboRef.current = false;
+    setIsSpeaking(false);
   }, []);
 
-  return { speak, stop, isSpeaking };
+  return { speak, speakIgbo, stop, isSpeaking };
 }

@@ -2,9 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSavedWords } from "@/hooks/useSavedWords";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen, Heart, Flame } from "lucide-react";
 
 type PracticeType = "translation" | "fill_gap" | "phrase_rebuild";
 
@@ -35,9 +36,27 @@ function getEncouragement(percentage: number): string {
   return "It's okay to make mistakes — that's how we learn! Keep going! 💙";
 }
 
+function getStreakDays(sessions: PracticeSession[]): number {
+  if (!sessions?.length) return 0;
+  const dates = [...new Set(sessions.map((s) => new Date(s.created_at).toDateString()))].sort(
+    (a, b) => new Date(b).getTime() - new Date(a).getTime()
+  );
+  const today = new Date().toDateString();
+  if (dates[0] !== today) return 0;
+  let streak = 0;
+  const check = new Date();
+  for (const d of dates) {
+    if (check.toDateString() !== d) break;
+    streak++;
+    check.setDate(check.getDate() - 1);
+  }
+  return streak;
+}
+
 export default function Progress() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { savedWords, savedApiWordIds } = useSavedWords();
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["practice-sessions", user?.id],
@@ -80,6 +99,8 @@ export default function Progress() {
   const totalScore = sessions?.reduce((acc, s) => acc + s.score, 0) || 0;
   const totalQuestions = sessions?.reduce((acc, s) => acc + s.total_questions, 0) || 0;
   const overallPercentage = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+  const wordsSavedCount = savedWords.length + savedApiWordIds.length;
+  const streakDays = getStreakDays(sessions ?? []);
 
   const statsByType = sessions?.reduce((acc, session) => {
     if (!acc[session.practice_type]) {
@@ -108,6 +129,18 @@ export default function Progress() {
           <p className="text-muted-foreground">
             Track your learning journey and celebrate your wins!
           </p>
+          <div className="flex flex-wrap gap-4 mt-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Heart className="h-5 w-5" />
+              <span>Words you've saved: <strong className="text-foreground">{wordsSavedCount}</strong></span>
+            </div>
+            {streakDays > 0 && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Flame className="h-5 w-5 text-primary" />
+                <span>You've practiced <strong className="text-foreground">{streakDays}</strong> day{streakDays !== 1 ? "s" : ""} in a row</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Overall Stats */}
