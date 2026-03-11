@@ -388,6 +388,27 @@ export type Database = {
           },
         ]
       }
+      user_saved_api_words: {
+        Row: {
+          created_at: string
+          id: string
+          igbo_api_word_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          igbo_api_word_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          igbo_api_word_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vocab_categories: {
         Row: {
           created_at: string
@@ -420,6 +441,7 @@ export type Database = {
           category_id: string
           created_at: string
           cultural_note: string | null
+          dialect: string | null
           english_translation: string
           example_sentence_english: string | null
           example_sentence_igbo: string | null
@@ -430,6 +452,7 @@ export type Database = {
           category_id: string
           created_at?: string
           cultural_note?: string | null
+          dialect?: string | null
           english_translation: string
           example_sentence_english?: string | null
           example_sentence_igbo?: string | null
@@ -440,6 +463,7 @@ export type Database = {
           category_id?: string
           created_at?: string
           cultural_note?: string | null
+          dialect?: string | null
           english_translation?: string
           example_sentence_english?: string | null
           example_sentence_igbo?: string | null

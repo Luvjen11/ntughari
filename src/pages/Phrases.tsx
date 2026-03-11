@@ -24,7 +24,7 @@ interface PhrasePart {
 }
 
 export default function Phrases() {
-  const { speak } = useTTS();
+  const { speakIgbo } = useTTS();
   const [selectedPhrase, setSelectedPhrase] = useState<Phrase | null>(null);
   const [rebuildMode, setRebuildMode] = useState(false);
   const [userOrder, setUserOrder] = useState<PhrasePart[]>([]);
@@ -185,7 +185,7 @@ export default function Phrases() {
                     </p>
                   </div>
                   <button
-                    onClick={() => speak(selectedPhrase.igbo_phrase)}
+                    onClick={() => speakIgbo(selectedPhrase.igbo_phrase)}
                     className="brutal-button bg-primary flex items-center gap-2"
                   >
                     <Volume2 size={20} />

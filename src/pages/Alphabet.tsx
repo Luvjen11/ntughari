@@ -20,7 +20,7 @@ interface LetterExample {
 }
 
 export default function Alphabet() {
-  const { speak } = useTTS();
+  const { speakIgbo } = useTTS();
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [letterOfTheDay, setLetterOfTheDay] = useState<Letter | null>(null);
 
@@ -134,7 +134,7 @@ export default function Alphabet() {
               <button
                 onClick={() => {
                   setSelectedLetter(letterOfTheDay);
-                  speak(letterOfTheDay.character);
+                  speakIgbo(letterOfTheDay.character);
                 }}
                 className="flex items-center gap-4"
               >
@@ -162,7 +162,7 @@ export default function Alphabet() {
                 )}
               </div>
               <button
-                onClick={() => speak(selectedLetter.character)}
+                onClick={() => speakIgbo(selectedLetter.character)}
                 className="brutal-button bg-primary flex items-center gap-2"
               >
                 <Volume2 size={20} />
@@ -191,7 +191,7 @@ export default function Alphabet() {
                         </p>
                       </div>
                       <button
-                        onClick={() => speak(example.igbo_word)}
+                        onClick={() => speakIgbo(example.igbo_word)}
                         className="p-2 rounded-lg border-2 border-foreground bg-card hover:bg-primary transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                       >
                         <Volume2 size={18} />
@@ -217,7 +217,7 @@ export default function Alphabet() {
               key={letter.id}
               onClick={() => {
                 setSelectedLetter(letter);
-                speak(letter.character);
+                speakIgbo(letter.character);
               }}
               className={`brutal-card p-4 flex items-center justify-center aspect-square transition-all
                 ${selectedLetter?.id === letter.id 

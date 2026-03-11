@@ -27,6 +27,8 @@ import PhraseRebuildPractice from "./pages/practice/PhraseRebuildPractice";
 import Progress from "./pages/Progress";
 import Stories from "./pages/Stories";
 import StoryPlayer from "./pages/StoryPlayer";
+import MyWords from "./pages/MyWords";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +45,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/alphabet" element={<Alphabet />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
+            <Route path="/my-words" element={<MyWords />} />
+            <Route path="/help" element={<Help />} />
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
             <Route path="/auth" element={<Auth />} />
