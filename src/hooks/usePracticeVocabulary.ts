@@ -68,7 +68,7 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
       }
       const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as PracticeVocabWord[];
+      return data as PracticeVocabWord[];
     },
     enabled: source === "all",
   });
@@ -83,7 +83,7 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
       }
       const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as PracticeVocabWord[];
+      return data as PracticeVocabWord[];
     },
     enabled: source === "category" && !!categoryId,
   });
@@ -98,7 +98,7 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
       }
       const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as PracticeVocabWord[];
+      return data as PracticeVocabWord[];
     },
     enabled: source === "my-words" && savedWords.length > 0,
   });
@@ -115,9 +115,9 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
     enabled: source === "my-words" && savedApiWordIds.length > 0,
   });
 
-  const vocabulary: PracticeVocabWord[] = useMemo(() => {
+  const vocabulary = useMemo(() => {
     if (source === "my-words") {
-      const fromApi: PracticeVocabWord[] = (apiWords ?? []).map((w) => ({
+      const fromApi = (apiWords ?? []).map((w) => ({
         id: `api-${w.id}`,
         english_translation: firstDef(w) || w.word,
         igbo_word: w.word,
