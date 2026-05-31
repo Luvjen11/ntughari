@@ -5,7 +5,11 @@ interface IgboCharacterPadProps {
   disabled?: boolean;
 }
 
-const IGBO_CHARACTERS = ["ị", "ọ", "ụ", "ṅ", "Ị", "Ọ", "Ụ", "Ṅ"];
+const IGBO_CHARACTERS = [
+  "ị", "Ị", "ọ", "Ọ", "ụ", "Ụ",
+  "ñ", "ŋ", "ṅ",
+  "á", "à", "é", "è", "í", "ì", "ó", "ò", "ú", "ù",
+];
 
 export function IgboCharacterPad({ onCharacterClick, disabled }: IgboCharacterPadProps) {
   return (
