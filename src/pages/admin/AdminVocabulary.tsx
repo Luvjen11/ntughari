@@ -87,7 +87,7 @@ export default function AdminVocabulary() {
     queryFn: async () => {
       const { data, error } = await supabase.from("vocabulary").select("*");
       if (error) throw error;
-      return data as VocabWord[];
+      return data as unknown as VocabWord[];
     },
   });
 

@@ -62,9 +62,11 @@ serve(async (req: Request) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("YarnGPT API error:", response.status, errorText);
+      // Return 200 with fallback signal so the client can gracefully use its
+      // alternate audio path (Igbo API / browser TTS) without surfacing a runtime error.
       return jsonResponse(
-        { error: "TTS generation failed", details: errorText, status: response.status },
-        response.status >= 400 && response.status < 600 ? response.status : 502
+        { fallback: true, error: "TTS generation failed", upstreamStatus: response.status, details: errorText },
+        200
       );
     }
 
