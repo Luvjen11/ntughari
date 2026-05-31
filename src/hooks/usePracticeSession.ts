@@ -35,7 +35,7 @@ export function usePracticeSession(practiceType: PracticeType) {
     try {
       await supabase.from("practice_sessions").insert([{
         user_id: user.id,
-        practice_type: practiceType,
+        practice_type: practiceType as "fill_gap" | "phrase_rebuild" | "translation",
         items_practiced: items as unknown as undefined,
         score,
         total_questions: totalQuestions,

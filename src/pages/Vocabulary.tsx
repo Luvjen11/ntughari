@@ -102,7 +102,7 @@ export default function Vocabulary() {
         .select("*")
         .eq("category_id", selectedCategory.id);
       if (error) throw error;
-      return data as VocabWord[];
+      return data as unknown as VocabWord[];
     },
     enabled: !!selectedCategory,
   });
