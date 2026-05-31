@@ -14,7 +14,7 @@ export function StoryCard({ title, narrationText, culturalNote }: StoryCardProps
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showText, setShowText] = useState(true);
-  const { speak, stop, isSpeaking } = useTTS();
+  const { speakSentence, stop, isSpeaking } = useTTS();
 
   // Sync playing state with TTS
   useEffect(() => {
@@ -33,7 +33,7 @@ export function StoryCard({ title, narrationText, culturalNote }: StoryCardProps
       stop();
       setIsPlaying(false);
     } else {
-      speak(narrationText, { rate: 0.85 });
+      speakSentence(narrationText);
       setIsPlaying(true);
     }
   };

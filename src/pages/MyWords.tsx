@@ -88,11 +88,11 @@ export default function MyWords() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <Link
-          to="/vocabulary"
+          to="/practice"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft size={20} />
-          <span className="font-display font-semibold">Back to Vocabulary</span>
+          <span className="font-display font-semibold">Back to Practice</span>
         </Link>
 
         <div className="mb-8">

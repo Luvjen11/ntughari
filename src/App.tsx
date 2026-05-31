@@ -45,12 +45,13 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/alphabet" element={<Alphabet />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
-            <Route path="/my-words" element={<MyWords />} />
             <Route path="/help" element={<Help />} />
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/practice" element={<PracticeHub />} />
+            <Route path="/practice/my-words" element={<MyWords />} />
+            <Route path="/my-words" element={<MyWords />} />
             <Route path="/practice/translation" element={<TranslationPractice />} />
             <Route path="/practice/fill-gap" element={<FillGapPractice />} />
             <Route path="/practice/phrase-rebuild" element={<PhraseRebuildPractice />} />

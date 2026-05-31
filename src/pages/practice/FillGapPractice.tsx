@@ -1,23 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useSavedWords } from "@/hooks/useSavedWords";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { PracticeProgress } from "@/components/practice/PracticeProgress";
 import { PracticeCard } from "@/components/practice/PracticeCard";
 import { PracticeResult } from "@/components/practice/PracticeResult";
 import { usePracticeSession } from "@/hooks/usePracticeSession";
-import { Link } from "react-router-dom";
-
-interface VocabWord {
-  id: string;
-  igbo_word: string;
-  english_translation: string;
-  example_sentence_igbo: string | null;
-  example_sentence_english: string | null;
-}
+import { usePracticeVocabulary } from "@/hooks/usePracticeVocabulary";
 
 interface GapQuestion {
   id: string;
@@ -35,87 +25,49 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+function buildGapQuestions(vocabulary: ReturnType<typeof usePracticeVocabulary>["vocabulary"], count: number): GapQuestion[] {
+  const shuffled = shuffleArray([...vocabulary]);
+  return shuffled.slice(0, count).map((word) => {
+    const sentence = word.example_sentence_igbo || "";
+    const gappedSentence = sentence.replace(
+      new RegExp(word.igbo_word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+      "_____"
+    );
+    return {
+      id: word.id,
+      sentence: gappedSentence,
+      answer: word.igbo_word,
+      hint: word.english_translation,
+    };
+  });
+}
+
 export default function FillGapPractice() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const useMyWords = searchParams.get("source") === "my-words";
-  const { savedWords } = useSavedWords();
+  const { vocabulary, isLoading, source } = usePracticeVocabulary({ includeExamples: true });
   const [questions, setQuestions] = useState<GapQuestion[]>([]);
-  const { currentIndex, score, totalQuestions, isComplete, recordAnswer, saveSession, reset } = usePracticeSession("fill_gap");
-
-  const { data: allVocabulary, isLoading: loadingAll } = useQuery({
-    queryKey: ["vocabulary-fill-gap"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vocabulary")
-        .select("id, igbo_word, english_translation, example_sentence_igbo, example_sentence_english")
-        .not("example_sentence_igbo", "is", null);
-      if (error) throw error;
-      return data as VocabWord[];
-    },
-    enabled: !useMyWords,
-  });
-
-  const { data: savedVocabulary, isLoading: loadingSaved } = useQuery({
-    queryKey: ["vocabulary-fill-gap-saved", savedWords],
-    queryFn: async () => {
-      if (savedWords.length === 0) return [] as VocabWord[];
-      const { data, error } = await supabase
-        .from("vocabulary")
-        .select("id, igbo_word, english_translation, example_sentence_igbo, example_sentence_english")
-        .in("id", savedWords)
-        .not("example_sentence_igbo", "is", null);
-      if (error) throw error;
-      return (data ?? []) as VocabWord[];
-    },
-    enabled: useMyWords && savedWords.length > 0,
-  });
-
-  const vocabulary = useMyWords ? (savedVocabulary ?? []) : (allVocabulary ?? []);
-  const isLoading = useMyWords ? loadingSaved : loadingAll;
+  const { currentIndex, score, maxScore, totalQuestions, isComplete, recordAnswer, saveSession, reset } =
+    usePracticeSession("fill_gap");
 
   useEffect(() => {
     if (vocabulary.length > 0) {
-      const shuffled = shuffleArray([...vocabulary]);
-      const selected = shuffled.slice(0, totalQuestions);
-      const gapQuestions: GapQuestion[] = selected.map((word) => {
-        const sentence = word.example_sentence_igbo || "";
-        const gappedSentence = sentence.replace(
-          new RegExp(word.igbo_word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
-          "_____"
-        );
-        return {
-          id: word.id,
-          sentence: gappedSentence,
-          answer: word.igbo_word,
-          hint: word.english_translation,
-        };
-      });
-      setQuestions(gapQuestions);
+      setQuestions(buildGapQuestions(vocabulary, totalQuestions));
     }
   }, [vocabulary, totalQuestions]);
 
   const handleRetry = () => {
     reset();
     if (vocabulary.length > 0) {
-      const shuffled = shuffleArray([...vocabulary]);
-      const selected = shuffled.slice(0, totalQuestions);
-      const gapQuestions: GapQuestion[] = selected.map((word) => {
-        const sentence = word.example_sentence_igbo || "";
-        const gappedSentence = sentence.replace(
-          new RegExp(word.igbo_word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
-          "_____"
-        );
-        return {
-          id: word.id,
-          sentence: gappedSentence,
-          answer: word.igbo_word,
-          hint: word.english_translation,
-        };
-      });
-      setQuestions(gapQuestions);
+      setQuestions(buildGapQuestions(vocabulary, totalQuestions));
     }
   };
+
+  const sourceLabel =
+    source === "my-words"
+      ? "saved words"
+      : source === "category"
+        ? "this category"
+        : "vocabulary";
 
   if (isLoading) {
     return (
@@ -130,15 +82,21 @@ export default function FillGapPractice() {
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-2xl mx-auto text-center">
           <p className="text-muted-foreground mb-4">
-            {useMyWords
+            {source === "my-words"
               ? "Not enough saved words with example sentences. Save words that have examples from Vocabulary, then try again."
-              : "Not enough vocabulary with example sentences. Please add more words with examples first."}
+              : source === "category"
+                ? "Not enough words with example sentences in this category. Try another category or all vocabulary."
+                : "Not enough vocabulary with example sentences. Please add more words with examples first."}
           </p>
-          {useMyWords && (
+          {source === "my-words" && (
             <p className="text-muted-foreground mb-4">
-              <Link to="/my-words" className="font-semibold text-primary hover:underline">View My Words</Link>
+              <Link to="/practice/my-words" className="font-semibold text-primary hover:underline">
+                View My Words
+              </Link>
               {" · "}
-              <Link to="/vocabulary" className="font-semibold text-primary hover:underline">Vocabulary</Link>
+              <Link to="/vocabulary" className="font-semibold text-primary hover:underline">
+                Vocabulary
+              </Link>
             </p>
           )}
           <Button onClick={() => navigate("/practice")}>Back to Practice Hub</Button>
@@ -161,11 +119,13 @@ export default function FillGapPractice() {
           Back to Practice Hub
         </Button>
 
-        <h1 className="text-2xl font-bold mb-6">Fill the Gap</h1>
+        <h1 className="text-2xl font-bold mb-2">Fill the Gap</h1>
+        <p className="text-sm text-muted-foreground mb-6 capitalize">Practicing from {sourceLabel}</p>
 
         {isComplete ? (
           <PracticeResult
             score={score}
+            maxScore={maxScore}
             total={totalQuestions}
             onRetry={handleRetry}
             onSave={saveSession}
@@ -180,7 +140,8 @@ export default function FillGapPractice() {
                 hint={currentQuestion.hint}
                 fullSentence={currentQuestion.sentence.replace("_____", currentQuestion.answer)}
                 highlightWord={currentQuestion.answer}
-                onAnswer={(correct) => recordAnswer(currentQuestion.id, correct)}
+                graded
+                onAnswer={(scorePercent) => recordAnswer(currentQuestion.id, scorePercent)}
               />
             )}
           </>

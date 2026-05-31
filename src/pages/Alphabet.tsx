@@ -20,7 +20,7 @@ interface LetterExample {
 }
 
 export default function Alphabet() {
-  const { speakIgbo } = useTTS();
+  const { speakIgbo, speakSentence } = useTTS();
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [letterOfTheDay, setLetterOfTheDay] = useState<Letter | null>(null);
 
@@ -134,7 +134,7 @@ export default function Alphabet() {
               <button
                 onClick={() => {
                   setSelectedLetter(letterOfTheDay);
-                  speakIgbo(letterOfTheDay.character);
+                  speakSentence(letterOfTheDay.character);
                 }}
                 className="flex items-center gap-4"
               >
@@ -162,7 +162,7 @@ export default function Alphabet() {
                 )}
               </div>
               <button
-                onClick={() => speakIgbo(selectedLetter.character)}
+                onClick={() => speakSentence(selectedLetter.character)}
                 className="brutal-button bg-primary flex items-center gap-2"
               >
                 <Volume2 size={20} />
@@ -217,7 +217,7 @@ export default function Alphabet() {
               key={letter.id}
               onClick={() => {
                 setSelectedLetter(letter);
-                speakIgbo(letter.character);
+                speakSentence(letter.character);
               }}
               className={`brutal-card p-4 flex items-center justify-center aspect-square transition-all
                 ${selectedLetter?.id === letter.id 

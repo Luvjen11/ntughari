@@ -143,7 +143,7 @@ export default function Vocabulary() {
             {(savedWords.length > 0 || savedApiWordIds.length > 0) && (
               <>
                 {" · "}
-                <Link to="/my-words" className="font-semibold text-primary hover:underline">
+                <Link to="/practice/my-words" className="font-semibold text-primary hover:underline">
                   View My Words ({savedWords.length + savedApiWordIds.length})
                 </Link>
               </>
