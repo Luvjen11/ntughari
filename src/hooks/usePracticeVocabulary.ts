@@ -115,9 +115,9 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
     enabled: source === "my-words" && savedApiWordIds.length > 0,
   });
 
-  const vocabulary = useMemo(() => {
+  const vocabulary: PracticeVocabWord[] = useMemo(() => {
     if (source === "my-words") {
-      const fromApi = (apiWords ?? []).map((w) => ({
+      const fromApi: PracticeVocabWord[] = (apiWords ?? []).map((w) => ({
         id: `api-${w.id}`,
         english_translation: firstDef(w) || w.word,
         igbo_word: w.word,
