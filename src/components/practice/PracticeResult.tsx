@@ -5,14 +5,15 @@ import { useNavigate } from "react-router-dom";
 
 interface PracticeResultProps {
   score: number;
+  maxScore: number;
   total: number;
   onRetry: () => void;
   onSave: () => void;
 }
 
-export function PracticeResult({ score, total, onRetry, onSave }: PracticeResultProps) {
+export function PracticeResult({ score, maxScore, total, onRetry, onSave }: PracticeResultProps) {
   const navigate = useNavigate();
-  const percentage = Math.round((score / total) * 100);
+  const percentage = Math.round((score / maxScore) * 100);
 
   useEffect(() => {
     onSave();
@@ -30,13 +31,15 @@ export function PracticeResult({ score, total, onRetry, onSave }: PracticeResult
       <CardContent className="p-8 text-center">
         <div className="mb-6">
           <div className="text-6xl font-bold text-primary mb-2">
-            {score}/{total}
+            {percentage}%
           </div>
-          <p className="text-muted-foreground">{percentage}% correct</p>
+          <p className="text-muted-foreground">
+            {score} / {maxScore} points across {total} questions
+          </p>
         </div>
-        
+
         <p className="text-lg mb-8">{getMessage()}</p>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button onClick={onRetry} variant="outline" className="border-2">
             Practice Again

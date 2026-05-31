@@ -438,6 +438,7 @@ export type Database = {
       }
       vocabulary: {
         Row: {
+          audio_url: string | null
           category_id: string
           created_at: string
           cultural_note: string | null
@@ -449,6 +450,7 @@ export type Database = {
           igbo_word: string
         }
         Insert: {
+          audio_url?: string | null
           category_id: string
           created_at?: string
           cultural_note?: string | null
@@ -460,6 +462,7 @@ export type Database = {
           igbo_word: string
         }
         Update: {
+          audio_url?: string | null
           category_id?: string
           created_at?: string
           cultural_note?: string | null
@@ -495,7 +498,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
+      practice_type: "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -624,7 +627,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      practice_type: ["translation", "fill_gap", "phrase_rebuild"],
+      practice_type: ["translation", "fill_gap", "phrase_rebuild", "use_this_word"],
     },
   },
 } as const

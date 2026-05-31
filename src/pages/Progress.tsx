@@ -5,9 +5,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSavedWords } from "@/hooks/useSavedWords";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen, Heart, Flame } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen, Heart, Flame, MessageSquare } from "lucide-react";
 
-type PracticeType = "translation" | "fill_gap" | "phrase_rebuild";
+type PracticeType = "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word";
 
 interface PracticeSession {
   id: string;
@@ -21,13 +21,24 @@ const practiceTypeLabels: Record<PracticeType, string> = {
   translation: "Translation",
   fill_gap: "Fill the Gap",
   phrase_rebuild: "Phrase Rebuild",
+  use_this_word: "Use This Word",
 };
 
 const practiceTypeIcons: Record<PracticeType, React.ReactNode> = {
   translation: <BookOpen className="h-5 w-5" />,
   fill_gap: <Target className="h-5 w-5" />,
   phrase_rebuild: <TrendingUp className="h-5 w-5" />,
+  use_this_word: <MessageSquare className="h-5 w-5" />,
 };
+
+function sessionScorePercent(score: number, totalQuestions: number): number {
+  if (totalQuestions <= 0) return 0;
+  // Legacy sessions stored correct count (0–N); new sessions store sum of percent points (0–N×100).
+  if (score <= totalQuestions) {
+    return Math.round((score / totalQuestions) * 100);
+  }
+  return Math.round((score / (totalQuestions * 100)) * 100);
+}
 
 function getEncouragement(percentage: number): string {
   if (percentage >= 80) return "Amazing work! You're making great progress! 🌟";
@@ -96,9 +107,14 @@ export default function Progress() {
   }
 
   const totalSessions = sessions?.length || 0;
-  const totalScore = sessions?.reduce((acc, s) => acc + s.score, 0) || 0;
   const totalQuestions = sessions?.reduce((acc, s) => acc + s.total_questions, 0) || 0;
-  const overallPercentage = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+  const overallPercentage =
+    sessions && sessions.length > 0
+      ? Math.round(
+          sessions.reduce((acc, s) => acc + sessionScorePercent(s.score, s.total_questions), 0) /
+            sessions.length
+        )
+      : 0;
   const wordsSavedCount = savedWords.length + savedApiWordIds.length;
   const streakDays = getStreakDays(sessions ?? []);
 
@@ -160,8 +176,8 @@ export default function Progress() {
                 <p className="text-sm text-muted-foreground">Sessions Completed</p>
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalScore}/{totalQuestions}</p>
-                <p className="text-sm text-muted-foreground">Questions Correct</p>
+                <p className="text-2xl font-bold">{totalQuestions}</p>
+                <p className="text-sm text-muted-foreground">Questions Practiced</p>
               </div>
             </div>
           </CardContent>
@@ -169,11 +185,16 @@ export default function Progress() {
 
         {/* Stats by Type */}
         <h2 className="text-xl font-semibold mb-4">By Practice Type</h2>
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
-          {(["translation", "fill_gap", "phrase_rebuild"] as PracticeType[]).map((type) => {
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          {(["translation", "fill_gap", "phrase_rebuild", "use_this_word"] as PracticeType[]).map((type) => {
             const stats = statsByType?.[type];
-            const percentage = stats && stats.total > 0 
-              ? Math.round((stats.score / stats.total) * 100) 
+            const percentage = stats && stats.total > 0
+              ? Math.round(
+                  (sessions ?? [])
+                    .filter((s) => s.practice_type === type)
+                    .reduce((acc, s) => acc + sessionScorePercent(s.score, s.total_questions), 0) /
+                    stats.sessions
+                )
               : 0;
             
             return (
@@ -189,7 +210,7 @@ export default function Progress() {
                     <>
                       <p className="text-3xl font-bold">{percentage}%</p>
                       <p className="text-sm text-muted-foreground">
-                        {stats.sessions} sessions • {stats.score}/{stats.total} correct
+                        {stats.sessions} sessions
                       </p>
                     </>
                   ) : (
@@ -220,9 +241,11 @@ export default function Progress() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{session.score}/{session.total_questions}</p>
+                    <p className="font-bold">
+                      {sessionScorePercent(session.score, session.total_questions)}%
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      {Math.round((session.score / session.total_questions) * 100)}%
+                      {session.total_questions} questions
                     </p>
                   </div>
                 </CardContent>

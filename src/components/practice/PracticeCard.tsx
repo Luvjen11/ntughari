@@ -2,8 +2,9 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Check, X } from "lucide-react";
+import { Check, Sparkles, X } from "lucide-react";
 import { IgboCharacterPad } from "./IgboCharacterPad";
+import { gradeIgboAnswer, type IgboGradeResult } from "@/lib/gradeIgboAnswer";
 
 interface PracticeCardProps {
   prompt: string;
@@ -13,45 +14,75 @@ interface PracticeCardProps {
   fullSentence?: string;
   /** Word to highlight in fullSentence (e.g. the filled-in answer) */
   highlightWord?: string;
-  onAnswer: (correct: boolean) => void;
+  /** Use partial-credit Igbo grading instead of exact match */
+  graded?: boolean;
+  onAnswer: (scorePercent: number) => void;
 }
 
-export function PracticeCard({ prompt, correctAnswer, hint, fullSentence, highlightWord, onAnswer }: PracticeCardProps) {
+export function PracticeCard({
+  prompt,
+  correctAnswer,
+  hint,
+  fullSentence,
+  highlightWord,
+  graded = false,
+  onAnswer,
+}: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [grade, setGrade] = useState<IgboGradeResult | null>(null);
+  const [isExactMatch, setIsExactMatch] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
-    const correct = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-    setIsCorrect(correct);
+    if (graded) {
+      const result = gradeIgboAnswer(userAnswer, correctAnswer);
+      setGrade(result);
+      setIsExactMatch(result.tier === "exact");
+    } else {
+      const exact = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      setIsExactMatch(exact);
+      setGrade(
+        exact
+          ? { tier: "exact", scorePercent: 100, feedbackTitle: "Correct!", showCorrectAnswer: false }
+          : { tier: "wrong", scorePercent: 0, feedbackTitle: "Not quite", showCorrectAnswer: true }
+      );
+    }
     setSubmitted(true);
   };
 
   const handleNext = () => {
-    onAnswer(isCorrect);
+    onAnswer(grade?.scorePercent ?? 0);
     setUserAnswer("");
     setSubmitted(false);
-    setIsCorrect(false);
+    setGrade(null);
+    setIsExactMatch(false);
   };
 
   const insertCharacter = (char: string) => {
     const input = inputRef.current;
     if (!input) return;
-    
+
     const start = input.selectionStart ?? userAnswer.length;
     const end = input.selectionEnd ?? userAnswer.length;
     const newValue = userAnswer.slice(0, start) + char + userAnswer.slice(end);
-    
+
     setUserAnswer(newValue);
-    
-    // Restore focus and cursor position after state update
+
     setTimeout(() => {
       input.focus();
       const newPos = start + char.length;
       input.setSelectionRange(newPos, newPos);
     }, 0);
   };
+
+  const feedbackStyles = isExactMatch
+    ? "bg-primary/10 border-primary"
+    : grade?.tier === "missing_diacritics"
+      ? "bg-amber-500/10 border-amber-500"
+      : grade?.tier === "close"
+        ? "bg-blue-500/10 border-blue-500"
+        : "bg-accent/10 border-accent";
 
   return (
     <Card className="border-2 border-border">
@@ -60,7 +91,7 @@ export function PracticeCard({ prompt, correctAnswer, hint, fullSentence, highli
         {hint && (
           <p className="text-sm text-muted-foreground mb-4">Hint: {hint}</p>
         )}
-        
+
         <div className="space-y-4">
           <Input
             ref={inputRef}
@@ -71,30 +102,59 @@ export function PracticeCard({ prompt, correctAnswer, hint, fullSentence, highli
             onKeyDown={(e) => e.key === "Enter" && !submitted && handleSubmit()}
             className="border-2"
           />
-          
-          <IgboCharacterPad 
-            onCharacterClick={insertCharacter} 
-            disabled={submitted} 
+
+          <IgboCharacterPad
+            onCharacterClick={insertCharacter}
+            disabled={submitted}
           />
-          
-          {submitted && (
-            <div className={`p-4 rounded-lg border-2 ${isCorrect ? "bg-primary/10 border-primary" : "bg-accent/10 border-accent"}`}>
+
+          {submitted && grade && (
+            <div className={`p-4 rounded-lg border-2 ${feedbackStyles}`}>
               <div className="flex items-center gap-2 mb-2">
-                {isCorrect ? (
+                {isExactMatch ? (
                   <>
                     <Check className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-primary">Correct!</span>
+                    <span className="font-medium text-primary">{grade.feedbackTitle}</span>
+                  </>
+                ) : grade.tier === "missing_diacritics" ? (
+                  <>
+                    <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    <span className="font-medium text-amber-700 dark:text-amber-300">
+                      {grade.feedbackTitle}
+                    </span>
+                  </>
+                ) : grade.tier === "close" ? (
+                  <>
+                    <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-medium text-blue-700 dark:text-blue-300">
+                      {grade.feedbackTitle}
+                    </span>
                   </>
                 ) : (
                   <>
                     <X className="h-5 w-5 text-accent" />
-                    <span className="font-medium text-accent">Not quite</span>
+                    <span className="font-medium text-accent">{grade.feedbackTitle}</span>
                   </>
                 )}
               </div>
-              {!isCorrect && (
+              {grade.showCorrectAnswer && (
                 <p className="text-sm text-muted-foreground">
-                  The answer is: <span className="font-medium text-foreground">{correctAnswer}</span>
+                  {grade.tier === "missing_diacritics" ? (
+                    <>
+                      The correct spelling is:{" "}
+                      <span className="font-medium text-foreground">{correctAnswer}</span>
+                    </>
+                  ) : (
+                    <>
+                      The answer is:{" "}
+                      <span className="font-medium text-foreground">{correctAnswer}</span>
+                    </>
+                  )}
+                </p>
+              )}
+              {graded && grade.scorePercent < 100 && grade.scorePercent > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Partial credit: {grade.scorePercent}%
                 </p>
               )}
               {fullSentence && highlightWord && submitted && (
@@ -103,17 +163,21 @@ export function PracticeCard({ prompt, correctAnswer, hint, fullSentence, highli
                   {fullSentence.split(highlightWord).map((part, i, arr) => (
                     <span key={i}>
                       {part}
-                      {i < arr.length - 1 && <mark className="bg-primary/30 font-medium rounded px-0.5">{highlightWord}</mark>}
+                      {i < arr.length - 1 && (
+                        <mark className="bg-primary/30 font-medium rounded px-0.5">{highlightWord}</mark>
+                      )}
                     </span>
                   ))}
                 </p>
               )}
-              <p className="text-sm text-muted-foreground mt-2 italic">
-                It's okay to be wrong — that's how we learn!
-              </p>
+              {!isExactMatch && (
+                <p className="text-sm text-muted-foreground mt-2 italic">
+                  It's okay to be wrong — that's how we learn!
+                </p>
+              )}
             </div>
           )}
-          
+
           {!submitted ? (
             <Button onClick={handleSubmit} disabled={!userAnswer.trim()} className="w-full">
               Check Answer

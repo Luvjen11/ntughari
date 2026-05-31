@@ -21,6 +21,7 @@ import AdminStories from "./pages/admin/AdminStories";
 import AdminStoryScenes from "./pages/admin/AdminStoryScenes";
 import AdminCategories from "./pages/admin/AdminCategories";
 import PracticeHub from "./pages/practice/PracticeHub";
+import UseThisWordPractice from "./pages/practice/UseThisWordPractice";
 import TranslationPractice from "./pages/practice/TranslationPractice";
 import FillGapPractice from "./pages/practice/FillGapPractice";
 import PhraseRebuildPractice from "./pages/practice/PhraseRebuildPractice";
@@ -45,12 +46,14 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/alphabet" element={<Alphabet />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
-            <Route path="/my-words" element={<MyWords />} />
             <Route path="/help" element={<Help />} />
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/practice" element={<PracticeHub />} />
+            <Route path="/practice/my-words" element={<MyWords />} />
+            <Route path="/my-words" element={<MyWords />} />
+            <Route path="/practice/use-this-word" element={<UseThisWordPractice />} />
             <Route path="/practice/translation" element={<TranslationPractice />} />
             <Route path="/practice/fill-gap" element={<FillGapPractice />} />
             <Route path="/practice/phrase-rebuild" element={<PhraseRebuildPractice />} />

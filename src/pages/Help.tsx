@@ -20,7 +20,7 @@ export default function Help() {
           <section>
             <h2 className="font-display text-xl font-semibold mb-2">How does My Words work?</h2>
             <p className="text-muted-foreground leading-relaxed">
-              When you're on Vocabulary (by category or dictionary) or viewing words from a story, you can tap the heart icon to save a word to My Words. Your saved words appear on the <Link to="/my-words" className="font-semibold text-primary hover:underline">My Words</Link> page. You can listen to pronunciation, remove words with the heart again, or use "Play all" to hear them in sequence. You can also practice from your saved words in the Practice hub by choosing "My saved words" before starting a session.
+              When you're on Vocabulary (by category or dictionary) or viewing words from a story, you can tap the heart icon to save a word to My Words. Your saved words live in <Link to="/practice/my-words" className="font-semibold text-primary hover:underline">Practice → My Words</Link>. You can listen to pronunciation, remove words with the heart again, or use "Play all" to hear them in sequence. You can also practice from your saved words in the Practice hub by choosing "My saved words" before starting a session.
             </p>
           </section>
 
@@ -41,7 +41,7 @@ export default function Help() {
           <section>
             <h2 className="font-display text-xl font-semibold mb-2">How do I practice?</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Go to <Link to="/practice" className="font-semibold text-primary hover:underline">Practice</Link> and choose a mode: <strong>English → Igbo</strong> (translate words), <strong>Fill the Gap</strong> (complete sentences with the missing Igbo word), or <strong>Phrase Rebuild</strong> (order words to form phrases). You can practice from all vocabulary or from your saved words only. Each session is 5 questions; after finishing, you can save the session to your progress (when signed in) or practice again.
+              Go to <Link to="/practice" className="font-semibold text-primary hover:underline">Practice</Link> and choose a mode. <strong>Use This Word</strong> is the daily speaking drill: you get English prompts and write Igbo sentences using a word you've learned — with feedback on word choice, spelling, diacritics, and structure. Other modes include <strong>English → Igbo</strong>, <strong>Fill the Gap</strong>, and <strong>Phrase Rebuild</strong>. You can practice from all vocabulary, your saved words, or a specific category.
             </p>
           </section>
         </div>

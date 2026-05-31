@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Volume2, Heart, ArrowLeft, BookOpen, Search } from "lucide-react";
@@ -39,11 +39,14 @@ interface VocabWord {
   example_sentence_english: string | null;
   cultural_note: string | null;
   dialect: string | null;
+  audio_url: string | null;
 }
 
 export default function Vocabulary() {
-  const { speakIgbo } = useTTS();
+  const { speakIgboWord } = useTTS();
   const [selectedCategory, setSelectedCategory] = useState<VocabCategory | null>(null);
+  const [dialectFilter, setDialectFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"default" | "igbo" | "dialect">("default");
   const {
     savedWords,
     toggleSaveWord,
@@ -104,6 +107,30 @@ export default function Vocabulary() {
     enabled: !!selectedCategory,
   });
 
+  const dialectOptions = useMemo(() => {
+    const set = new Set<string>();
+    (words ?? []).forEach((w) => {
+      if (w.dialect?.trim()) set.add(w.dialect.trim());
+    });
+    return Array.from(set).sort();
+  }, [words]);
+
+  const displayedWords = useMemo(() => {
+    let list = words ?? [];
+    if (dialectFilter !== "all") {
+      list = list.filter((w) => w.dialect === dialectFilter);
+    }
+    if (sortBy === "igbo") {
+      return [...list].sort((a, b) => a.igbo_word.localeCompare(b.igbo_word, "ig"));
+    }
+    if (sortBy === "dialect") {
+      return [...list].sort((a, b) =>
+        (a.dialect ?? "zzz").localeCompare(b.dialect ?? "zzz", undefined, { sensitivity: "base" })
+      );
+    }
+    return list;
+  }, [words, dialectFilter, sortBy]);
+
   if (loadingCategories) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -143,7 +170,7 @@ export default function Vocabulary() {
             {(savedWords.length > 0 || savedApiWordIds.length > 0) && (
               <>
                 {" · "}
-                <Link to="/my-words" className="font-semibold text-primary hover:underline">
+                <Link to="/practice/my-words" className="font-semibold text-primary hover:underline">
                   View My Words ({savedWords.length + savedApiWordIds.length})
                 </Link>
               </>
@@ -214,13 +241,65 @@ export default function Vocabulary() {
                       </p>
                     )}
                   </div>
+                  {(dialectOptions.length > 0 || (words && words.length > 0)) && (
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      {dialectOptions.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Dialect:</span>
+                          <div className="flex flex-wrap gap-1 border-2 border-foreground rounded-lg p-1 bg-card">
+                            <button
+                              onClick={() => setDialectFilter("all")}
+                              className={`px-2 py-1 text-sm font-semibold rounded ${
+                                dialectFilter === "all" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                              }`}
+                            >
+                              All
+                            </button>
+                            {dialectOptions.map((d) => (
+                              <button
+                                key={d}
+                                onClick={() => setDialectFilter(d)}
+                                className={`px-2 py-1 text-sm font-semibold rounded ${
+                                  dialectFilter === d ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                                }`}
+                              >
+                                {d}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Sort:</span>
+                        <div className="flex gap-1 border-2 border-foreground rounded-lg p-1 bg-card">
+                          {(
+                            [
+                              ["default", "Default"],
+                              ["igbo", "Igbo A–Z"],
+                              ["dialect", "Dialect"],
+                            ] as const
+                          ).map(([value, label]) => (
+                            <button
+                              key={value}
+                              onClick={() => setSortBy(value)}
+                              className={`px-2 py-1 text-sm font-semibold rounded ${
+                                sortBy === value ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {loadingWords ? (
                     <div className="brutal-card bg-muted p-8 animate-pulse">
                       <p>Loading words...</p>
                     </div>
-                  ) : words && words.length > 0 ? (
+                  ) : displayedWords.length > 0 ? (
                     <div className="space-y-4">
-                      {words.map((word) => (
+                      {displayedWords.map((word) => (
                         <div
                           key={word.id}
                           className="brutal-card bg-card p-5 animate-slide-up"
@@ -251,7 +330,9 @@ export default function Vocabulary() {
                                 />
                               </button>
                               <button
-                                onClick={() => speakIgbo(word.igbo_word)}
+                                onClick={() =>
+                                  speakIgboWord(word.igbo_word, { recordedUrl: word.audio_url })
+                                }
                                 className="p-2 rounded-lg border-2 border-foreground bg-primary hover:bg-primary/80 transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                               >
                                 <Volume2 size={18} />
@@ -275,6 +356,11 @@ export default function Vocabulary() {
                           )}
                         </div>
                       ))}
+                    </div>
+                  ) : words && words.length > 0 ? (
+                    <div className="brutal-card bg-muted p-8 text-center max-w-md mt-4">
+                      <p className="font-display text-xl font-bold mb-2">No words match this filter</p>
+                      <p className="text-muted-foreground">Try a different dialect filter.</p>
                     </div>
                   ) : (
                     <div className="brutal-card bg-muted p-8 text-center max-w-md mt-4">
@@ -364,7 +450,7 @@ export default function Vocabulary() {
                               />
                             </button>
                             <button
-                              onClick={() => speakIgbo(w.word)}
+                              onClick={() => speakIgboWord(w.word, { recordedUrl: w.pronunciation })}
                               className="p-2 rounded-lg border-2 border-foreground bg-primary hover:bg-primary/80 transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                               title="Play pronunciation"
                             >

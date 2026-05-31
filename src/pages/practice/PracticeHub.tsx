@@ -1,10 +1,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Languages, PenLine, Puzzle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Heart, Languages, MessageSquare, PenLine, Puzzle } from "lucide-react";
+import { buildPracticeUrl, type PracticeSource } from "@/hooks/usePracticeVocabulary";
 
 const practiceTypes = [
+  {
+    id: "use-this-word",
+    title: "Use This Word",
+    description: "Daily speaking drill — write Igbo sentences using words you've learned",
+    icon: MessageSquare,
+    path: "/practice/use-this-word",
+    usesVocabulary: true,
+  },
   {
     id: "translation",
     title: "English → Igbo",
@@ -31,15 +49,36 @@ const practiceTypes = [
   },
 ];
 
+interface VocabCategory {
+  id: string;
+  name: string;
+  icon: string | null;
+}
+
 export default function PracticeHub() {
   const navigate = useNavigate();
-  const [practiceSource, setPracticeSource] = useState<"all" | "my-words">("all");
+  const [practiceSource, setPracticeSource] = useState<PracticeSource>("all");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+
+  const { data: categories } = useQuery({
+    queryKey: ["vocab_categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vocab_categories")
+        .select("id, name, icon")
+        .order("order_index");
+      if (error) throw error;
+      return data as VocabCategory[];
+    },
+  });
 
   const handlePracticeClick = (path: string, usesVocabulary: boolean) => {
-    const url = usesVocabulary && practiceSource === "my-words"
-      ? `${path}?source=my-words`
-      : path;
-    navigate(url);
+    if (!usesVocabulary) {
+      navigate(path);
+      return;
+    }
+    if (practiceSource === "category" && !selectedCategoryId) return;
+    navigate(buildPracticeUrl(path, practiceSource, selectedCategoryId));
   };
 
   return (
@@ -59,11 +98,11 @@ export default function PracticeHub() {
           <p className="text-muted-foreground mb-4">
             Practice makes progress. Choose a mode and start learning at your own pace.
           </p>
-          <p className="text-sm text-muted-foreground mb-2">
-            Start with Translation to build word recall.
-          </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Start with <strong>Use This Word</strong> to practice production, or Translation for word recall.
+            </p>
           <p className="text-sm text-muted-foreground mb-2">Practice from:</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 mb-3">
             <Button
               variant={practiceSource === "all" ? "default" : "outline"}
               size="sm"
@@ -80,14 +119,41 @@ export default function PracticeHub() {
             >
               My saved words
             </Button>
+            <Button
+              variant={practiceSource === "category" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPracticeSource("category")}
+              className="border-2 border-foreground"
+            >
+              By category
+            </Button>
           </div>
+          {practiceSource === "category" && (
+            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+              <SelectTrigger className="w-full max-w-sm border-2">
+                <SelectValue placeholder="Choose a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {(categories ?? []).map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.icon ? `${category.icon} ` : ""}
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 mb-8">
           {practiceTypes.map((type) => (
             <Card
               key={type.id}
-              className="border-2 border-border hover:border-primary transition-colors cursor-pointer"
+              className={`border-2 border-border transition-colors cursor-pointer ${
+                type.usesVocabulary && practiceSource === "category" && !selectedCategoryId
+                  ? "opacity-60 cursor-not-allowed"
+                  : "hover:border-primary"
+              }`}
               onClick={() => handlePracticeClick(type.path, type.usesVocabulary ?? false)}
             >
               <CardHeader className="pb-2">
@@ -107,8 +173,27 @@ export default function PracticeHub() {
           ))}
         </div>
 
+        <Card
+          className="border-2 border-border hover:border-primary transition-colors cursor-pointer"
+          onClick={() => navigate("/practice/my-words")}
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-secondary/50">
+                <Heart className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-xl">My Words</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <CardDescription className="text-base">
+              Review words you've saved, listen to pronunciation, and manage your personal word list.
+            </CardDescription>
+          </CardContent>
+        </Card>
+
         <p className="text-center text-sm text-muted-foreground mt-8">
-          5 questions per session • No timers • Learn at your own pace
+          5 questions per session • Partial credit for close answers • Learn at your own pace
         </p>
       </div>
     </div>

@@ -16,11 +16,11 @@ interface WordsFromSceneProps {
 }
 
 export function WordsFromScene({ words, onContinue }: WordsFromSceneProps) {
-  const { speakIgbo, isSpeaking } = useTTS();
+  const { speakIgboWord, isSpeaking } = useTTS();
   const { savedWords, toggleSaveWord, loading: isSavingWords } = useSavedWords();
 
   const handleSpeak = (text: string) => {
-    speakIgbo(text);
+    speakIgboWord(text);
   };
 
   const handleToggleSave = (wordId: string) => {

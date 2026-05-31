@@ -46,7 +46,7 @@ export default function PhraseRebuildPractice() {
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   
-  const { currentIndex, score, totalQuestions, isComplete, recordAnswer, saveSession, reset } = usePracticeSession("phrase_rebuild");
+  const { currentIndex, score, maxScore, totalQuestions, isComplete, recordAnswer, saveSession, reset } = usePracticeSession("phrase_rebuild");
 
   const { data: phrases, isLoading: phrasesLoading } = useQuery({
     queryKey: ["phrases-practice"],
@@ -127,7 +127,7 @@ export default function PhraseRebuildPractice() {
   };
 
   const handleNext = () => {
-    recordAnswer(questions[currentIndex].id, isCorrect);
+    recordAnswer(questions[currentIndex].id, isCorrect ? 100 : 0);
   };
 
   const handleReset = () => {
@@ -213,6 +213,7 @@ export default function PhraseRebuildPractice() {
         {isComplete ? (
           <PracticeResult
             score={score}
+            maxScore={maxScore}
             total={Math.min(totalQuestions, phrasesWithParts.length)}
             onRetry={handleRetry}
             onSave={saveSession}
