@@ -359,6 +359,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_saved_api_words: {
+        Row: {
+          created_at: string
+          id: string
+          igbo_api_word_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          igbo_api_word_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          igbo_api_word_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_saved_words: {
         Row: {
           created_at: string
@@ -387,27 +408,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_saved_api_words: {
-        Row: {
-          created_at: string
-          id: string
-          igbo_api_word_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          igbo_api_word_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          igbo_api_word_id?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       vocab_categories: {
         Row: {
@@ -438,7 +438,6 @@ export type Database = {
       }
       vocabulary: {
         Row: {
-          audio_url: string | null
           category_id: string
           created_at: string
           cultural_note: string | null
@@ -450,7 +449,6 @@ export type Database = {
           igbo_word: string
         }
         Insert: {
-          audio_url?: string | null
           category_id: string
           created_at?: string
           cultural_note?: string | null
@@ -462,7 +460,6 @@ export type Database = {
           igbo_word: string
         }
         Update: {
-          audio_url?: string | null
           category_id?: string
           created_at?: string
           cultural_note?: string | null
@@ -498,7 +495,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      practice_type: "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word"
+      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -627,7 +624,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      practice_type: ["translation", "fill_gap", "phrase_rebuild", "use_this_word"],
+      practice_type: ["translation", "fill_gap", "phrase_rebuild"],
     },
   },
 } as const
