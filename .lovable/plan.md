@@ -1,0 +1,1 @@
+Deploy the `tts` edge function (the only one in `supabase/functions/`) using the Supabase deploy tool. No code changes needed.
