@@ -8,6 +8,7 @@ import { useTTS } from "@/hooks/useTTS";
 import { ArrowLeft, Heart, Volume2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CultureNote } from "@/components/CultureNote";
+import { VOCAB_LIST_COLUMNS, type VocabRowWithOptionalAudio } from "@/lib/supabaseFunctions";
 
 /** API definitions may be string[] or object[]. Return first definition string. */
 function firstDef(w: IgboApiWord): string {
@@ -22,19 +23,11 @@ function firstDef(w: IgboApiWord): string {
 
 type SourceFilter = "all" | "vocabulary" | "dictionary";
 
-interface VocabRow {
-  id: string;
-  igbo_word: string;
-  english_translation: string;
-  example_sentence_igbo: string | null;
-  example_sentence_english: string | null;
-  cultural_note: string | null;
-  dialect: string | null;
-}
+interface VocabRow extends VocabRowWithOptionalAudio {}
 
 export default function MyWords() {
   const { savedWords, savedApiWordIds, toggleSaveWord, toggleSaveApiWord, isWordSaved, isApiWordSaved } = useSavedWords();
-  const { speakIgbo, isSpeaking } = useTTS();
+  const { speakIgboWord, isSpeaking } = useTTS();
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [playAllPlaying, setPlayAllPlaying] = useState(false);
 
@@ -44,7 +37,7 @@ export default function MyWords() {
       if (savedWords.length === 0) return [] as VocabRow[];
       const { data, error } = await supabase
         .from("vocabulary")
-        .select("id, igbo_word, english_translation, example_sentence_igbo, example_sentence_english, cultural_note, dialect")
+        .select(VOCAB_LIST_COLUMNS)
         .in("id", savedWords);
       if (error) throw error;
       return (data ?? []) as VocabRow[];
@@ -67,17 +60,28 @@ export default function MyWords() {
   });
 
   const playAll = useCallback(async () => {
-    const vocab: { igbo: string }[] = (vocabRows ?? []).map((w) => ({ igbo: w.igbo_word }));
-    const api: { igbo: string }[] = (apiWords ?? []).map((w) => ({ igbo: w.word }));
-    const list = sourceFilter === "dictionary" ? api : sourceFilter === "vocabulary" ? vocab : [...vocab, ...api];
+    const vocabItems = (vocabRows ?? []).map((w) => ({
+      igbo: w.igbo_word,
+      recordedUrl: w.audio_url,
+    }));
+    const apiItems = (apiWords ?? []).map((w) => ({
+      igbo: w.word,
+      recordedUrl: w.pronunciation ?? null,
+    }));
+    const list =
+      sourceFilter === "dictionary"
+        ? apiItems
+        : sourceFilter === "vocabulary"
+          ? vocabItems
+          : [...vocabItems, ...apiItems];
     if (list.length === 0) return;
     setPlayAllPlaying(true);
     for (const item of list) {
-      speakIgbo(item.igbo);
+      await speakIgboWord(item.igbo, { recordedUrl: item.recordedUrl });
       await new Promise((r) => setTimeout(r, 2500));
     }
     setPlayAllPlaying(false);
-  }, [sourceFilter, vocabRows, apiWords, speakIgbo]);
+  }, [sourceFilter, vocabRows, apiWords, speakIgboWord]);
 
   const totalCount = (vocabRows?.length ?? 0) + (apiWords?.length ?? 0);
   const showVocab = sourceFilter === "all" || sourceFilter === "vocabulary";
@@ -149,9 +153,10 @@ export default function MyWords() {
 
         {!isLoading && totalCount > 0 && (
           <div className="space-y-4">
-            {showVocab && (vocabRows ?? []).map((word) => (
+            {showVocab &&
+              (vocabRows ?? []).map((word) => (
               <div
-                key={word.id}
+                key={`vocab-${word.id}`}
                 className="brutal-card bg-card p-5 animate-slide-up"
               >
                 <div className="flex items-start justify-between gap-4 mb-2">
@@ -171,7 +176,7 @@ export default function MyWords() {
                       <Heart size={18} fill="currentColor" />
                     </button>
                     <button
-                      onClick={() => speakIgbo(word.igbo_word)}
+                      onClick={() => speakIgboWord(word.igbo_word, { recordedUrl: word.audio_url })}
                       disabled={isSpeaking}
                       className="p-2 rounded-lg border-2 border-foreground bg-primary hover:bg-primary/80 shadow-brutal-sm"
                       title="Play pronunciation"
@@ -192,9 +197,10 @@ export default function MyWords() {
               </div>
             ))}
 
-            {showApi && (apiWords ?? []).map((w) => (
+            {showApi &&
+              (apiWords ?? []).map((w) => (
               <div
-                key={w.id}
+                key={`api-${w.id}`}
                 className="brutal-card bg-card p-5 animate-slide-up"
               >
                 <div className="flex items-start justify-between gap-4 mb-2">
@@ -212,7 +218,7 @@ export default function MyWords() {
                       <Heart size={18} fill="currentColor" />
                     </button>
                     <button
-                      onClick={() => speakIgbo(w.word)}
+                      onClick={() => speakIgboWord(w.word, { recordedUrl: w.pronunciation })}
                       disabled={isSpeaking}
                       className="p-2 rounded-lg border-2 border-foreground bg-primary hover:bg-primary/80 shadow-brutal-sm"
                       title="Play pronunciation"

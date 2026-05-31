@@ -5,9 +5,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSavedWords } from "@/hooks/useSavedWords";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen, Heart, Flame } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen, Heart, Flame, MessageSquare } from "lucide-react";
 
-type PracticeType = "translation" | "fill_gap" | "phrase_rebuild";
+type PracticeType = "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word";
 
 interface PracticeSession {
   id: string;
@@ -21,12 +21,14 @@ const practiceTypeLabels: Record<PracticeType, string> = {
   translation: "Translation",
   fill_gap: "Fill the Gap",
   phrase_rebuild: "Phrase Rebuild",
+  use_this_word: "Use This Word",
 };
 
 const practiceTypeIcons: Record<PracticeType, React.ReactNode> = {
   translation: <BookOpen className="h-5 w-5" />,
   fill_gap: <Target className="h-5 w-5" />,
   phrase_rebuild: <TrendingUp className="h-5 w-5" />,
+  use_this_word: <MessageSquare className="h-5 w-5" />,
 };
 
 function sessionScorePercent(score: number, totalQuestions: number): number {
@@ -183,8 +185,8 @@ export default function Progress() {
 
         {/* Stats by Type */}
         <h2 className="text-xl font-semibold mb-4">By Practice Type</h2>
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
-          {(["translation", "fill_gap", "phrase_rebuild"] as PracticeType[]).map((type) => {
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          {(["translation", "fill_gap", "phrase_rebuild", "use_this_word"] as PracticeType[]).map((type) => {
             const stats = statsByType?.[type];
             const percentage = stats && stats.total > 0
               ? Math.round(

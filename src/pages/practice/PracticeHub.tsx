@@ -11,10 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Heart, Languages, PenLine, Puzzle } from "lucide-react";
+import { ArrowLeft, Heart, Languages, MessageSquare, PenLine, Puzzle } from "lucide-react";
 import { buildPracticeUrl, type PracticeSource } from "@/hooks/usePracticeVocabulary";
 
 const practiceTypes = [
+  {
+    id: "use-this-word",
+    title: "Use This Word",
+    description: "Daily speaking drill — write Igbo sentences using words you've learned",
+    icon: MessageSquare,
+    path: "/practice/use-this-word",
+    usesVocabulary: true,
+  },
   {
     id: "translation",
     title: "English → Igbo",
@@ -90,9 +98,9 @@ export default function PracticeHub() {
           <p className="text-muted-foreground mb-4">
             Practice makes progress. Choose a mode and start learning at your own pace.
           </p>
-          <p className="text-sm text-muted-foreground mb-2">
-            Start with Translation to build word recall.
-          </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Start with <strong>Use This Word</strong> to practice production, or Translation for word recall.
+            </p>
           <p className="text-sm text-muted-foreground mb-2">Practice from:</p>
           <div className="flex flex-wrap gap-2 mb-3">
             <Button

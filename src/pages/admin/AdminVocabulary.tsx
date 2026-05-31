@@ -50,6 +50,7 @@ type VocabWord = {
   example_sentence_english: string | null;
   cultural_note: string | null;
   dialect: string | null;
+  audio_url: string | null;
 };
 
 type Category = {
@@ -70,6 +71,7 @@ export default function AdminVocabulary() {
     example_sentence_english: "",
     cultural_note: "",
     dialect: "",
+    audio_url: "",
   });
 
   // Import from Igbo API
@@ -108,6 +110,7 @@ export default function AdminVocabulary() {
         example_sentence_english: data.example_sentence_english || null,
         cultural_note: data.cultural_note || null,
         dialect: data.dialect || null,
+        audio_url: data.audio_url || null,
       });
       if (error) throw error;
     },
@@ -130,6 +133,7 @@ export default function AdminVocabulary() {
         example_sentence_english: data.example_sentence_english || null,
         cultural_note: data.cultural_note || null,
         dialect: data.dialect || null,
+        audio_url: data.audio_url || null,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -155,7 +159,7 @@ export default function AdminVocabulary() {
     onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
   });
 
-  const resetForm = () => setFormData({ igbo_word: "", english_translation: "", category_id: "", example_sentence_igbo: "", example_sentence_english: "", cultural_note: "", dialect: "" });
+  const resetForm = () => setFormData({ igbo_word: "", english_translation: "", category_id: "", example_sentence_igbo: "", example_sentence_english: "", cultural_note: "", dialect: "", audio_url: "" });
 
   const handleEdit = (word: VocabWord) => {
     setEditingWord(word);
@@ -167,6 +171,7 @@ export default function AdminVocabulary() {
       example_sentence_english: word.example_sentence_english || "",
       cultural_note: word.cultural_note || "",
       dialect: word.dialect || "",
+      audio_url: word.audio_url || "",
     });
     setIsDialogOpen(true);
   };
@@ -293,6 +298,10 @@ export default function AdminVocabulary() {
               <div>
                 <Label htmlFor="dialect">Dialect (optional)</Label>
                 <Input id="dialect" value={formData.dialect} onChange={(e) => setFormData({ ...formData, dialect: e.target.value })} className="border-2 border-foreground" placeholder="e.g., Standard Igbo" />
+              </div>
+              <div>
+                <Label htmlFor="audio_url">Recorded audio URL (optional)</Label>
+                <Input id="audio_url" value={formData.audio_url} onChange={(e) => setFormData({ ...formData, audio_url: e.target.value })} className="border-2 border-foreground" placeholder="https://... human-recorded pronunciation" />
               </div>
               <Button type="submit" className="brutal-button bg-secondary w-full" disabled={createMutation.isPending || updateMutation.isPending}>
                 {editingWord ? "Update" : "Create"}

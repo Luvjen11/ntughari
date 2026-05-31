@@ -20,7 +20,7 @@ interface LetterExample {
 }
 
 export default function Alphabet() {
-  const { speakIgbo, speakSentence } = useTTS();
+  const { speakIgboWord, speakSentence } = useTTS();
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [letterOfTheDay, setLetterOfTheDay] = useState<Letter | null>(null);
 
@@ -191,7 +191,7 @@ export default function Alphabet() {
                         </p>
                       </div>
                       <button
-                        onClick={() => speakIgbo(example.igbo_word)}
+                        onClick={() => speakIgboWord(example.igbo_word)}
                         className="p-2 rounded-lg border-2 border-foreground bg-card hover:bg-primary transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                       >
                         <Volume2 size={18} />

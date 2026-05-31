@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 const navLinks = [
   { to: "/alphabet", label: "Alphabet" },
   { to: "/vocabulary", label: "Vocabulary" },
+  { to: "/my-words", label: "My Words" },
   { to: "/skeletons", label: "Skeletons" },
   { to: "/phrases", label: "Phrases" },
   { to: "/practice", label: "Practice", icon: Brain },

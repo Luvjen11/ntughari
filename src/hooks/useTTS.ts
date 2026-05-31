@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { getWords } from "@/lib/igboApi";
 import { DEFAULT_YARNGPT_VOICE, type YarnGPTVoice } from "@/lib/ttsConstants";
+import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
 
 interface TTSOptions {
   rate?: number;
@@ -9,6 +10,12 @@ interface TTSOptions {
 interface SpeakSentenceOptions {
   voice?: YarnGPTVoice;
   rate?: number;
+}
+
+export interface IgboAudioOptions {
+  /** Human-recorded pronunciation URL — highest priority */
+  recordedUrl?: string | null;
+  voice?: YarnGPTVoice;
 }
 
 export function useTTS() {
@@ -77,10 +84,10 @@ export function useTTS() {
     const anyEnglish = availableVoices.find((v) => v.lang.startsWith("en"));
     if (anyEnglish) return anyEnglish;
 
-    console.warn("No English voice found, using default voice");
     return availableVoices[0];
   }, []);
 
+  /** Browser English TTS — for English text only, never for Igbo */
   const speak = useCallback(
     (text: string, options?: TTSOptions) => {
       if (!("speechSynthesis" in window)) {
@@ -113,11 +120,11 @@ export function useTTS() {
   );
 
   const playAudioUrl = useCallback(
-    (audioUrl: string, source: "igbo" | "yarngpt", onError: () => void) => {
+    (audioUrl: string, source: "recorded" | "igbo" | "yarngpt", onError: () => void) => {
       const audio = new Audio(audioUrl);
       igboAudioRef.current = audio;
 
-      if (source === "igbo") {
+      if (source === "igbo" || source === "recorded") {
         isPlayingIgboRef.current = true;
       } else {
         isPlayingYarnGPTRef.current = true;
@@ -143,31 +150,90 @@ export function useTTS() {
     [cleanupAudio]
   );
 
-  const speakIgbo = useCallback(
-    async (text: string) => {
+  const fetchYarnGPTAudio = useCallback(async (text: string, voice: YarnGPTVoice): Promise<string | null> => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return null;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/tts`, {
+      method: "POST",
+      headers: supabaseFunctionHeaders(),
+      body: JSON.stringify({ text, voice, responseFormat: "mp3" }),
+    });
+
+    if (!response.ok) return null;
+
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    audioBlobUrlRef.current = audioUrl;
+    return audioUrl;
+  }, []);
+
+  const fetchIgboApiAudio = useCallback(async (text: string): Promise<string | null> => {
+    const { words, error } = await getWords({ keyword: text });
+    if (error || !words?.length) return null;
+    const first = words.find((w) => w.pronunciation);
+    return first?.pronunciation ?? null;
+  }, []);
+
+  /**
+   * Play Igbo audio with priority: human recording → Igbo API → YarnGPT.
+   * Never falls back to English browser voice for Igbo text.
+   */
+  const speakIgboWord = useCallback(
+    async (text: string, options?: IgboAudioOptions) => {
       const trimmed = text?.trim();
       if (!trimmed) return;
+
+      const voice = options?.voice ?? DEFAULT_YARNGPT_VOICE;
 
       cleanupAudio();
       window.speechSynthesis?.cancel();
 
-      const { words, error } = await getWords({ keyword: trimmed });
-      if (error || !words?.length) {
-        speak(trimmed);
+      const tryYarnGPT = async () => {
+        try {
+          const url = await fetchYarnGPTAudio(trimmed, voice);
+          if (url) {
+            playAudioUrl(url, "yarngpt", () => {
+              console.warn("YarnGPT playback failed for:", trimmed);
+            });
+            return true;
+          }
+        } catch {
+          /* fall through */
+        }
+        return false;
+      };
+
+      const tryIgboApi = async () => {
+        const url = await fetchIgboApiAudio(trimmed);
+        if (url) {
+          playAudioUrl(url, "igbo", () => tryYarnGPT());
+          return true;
+        }
+        return false;
+      };
+
+      if (options?.recordedUrl) {
+        playAudioUrl(options.recordedUrl, "recorded", () => tryIgboApi());
         return;
       }
 
-      const first = words.find((w) => w.pronunciation);
-      if (!first?.pronunciation) {
-        speak(trimmed);
-        return;
+      const gotApi = await tryIgboApi();
+      if (!gotApi) {
+        await tryYarnGPT();
       }
-
-      playAudioUrl(first.pronunciation, "igbo", () => speak(trimmed));
     },
-    [speak, cleanupAudio, playAudioUrl]
+    [cleanupAudio, playAudioUrl, fetchIgboApiAudio, fetchYarnGPTAudio]
   );
 
+  /** @deprecated Prefer speakIgboWord with optional recordedUrl */
+  const speakIgbo = useCallback(
+    (text: string) => speakIgboWord(text),
+    [speakIgboWord]
+  );
+
+  /** Full sentences — YarnGPT → Igbo API word lookup → silent (no English for Igbo) */
   const speakSentence = useCallback(
     async (text: string, options?: SpeakSentenceOptions) => {
       const trimmed = text?.trim();
@@ -178,48 +244,15 @@ export function useTTS() {
       cleanupAudio();
       window.speechSynthesis?.cancel();
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        console.warn("Supabase not configured, falling back to Igbo API TTS");
-        speakIgbo(trimmed);
+      const gotYarn = await fetchYarnGPTAudio(trimmed, voice);
+      if (gotYarn) {
+        playAudioUrl(gotYarn, "yarngpt", () => speakIgboWord(trimmed, { voice }));
         return;
       }
 
-      const ttsFunctionUrl = `${supabaseUrl}/functions/v1/tts`;
-
-      try {
-        const response = await fetch(ttsFunctionUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({
-            text: trimmed,
-            voice,
-            responseFormat: "mp3",
-          }),
-        });
-
-        if (!response.ok) {
-          console.warn("YarnGPT TTS unavailable, falling back to Igbo API:", response.status);
-          speakIgbo(trimmed);
-          return;
-        }
-
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audioBlobUrlRef.current = audioUrl;
-
-        playAudioUrl(audioUrl, "yarngpt", () => speakIgbo(trimmed));
-      } catch (error) {
-        console.warn("YarnGPT TTS fetch error, falling back to Igbo API:", error);
-        speakIgbo(trimmed);
-      }
+      await speakIgboWord(trimmed, { voice });
     },
-    [speakIgbo, cleanupAudio, playAudioUrl]
+    [cleanupAudio, fetchYarnGPTAudio, playAudioUrl, speakIgboWord]
   );
 
   const stop = useCallback(() => {
@@ -230,5 +263,5 @@ export function useTTS() {
     setIsSpeaking(false);
   }, [cleanupAudio]);
 
-  return { speak, speakIgbo, speakSentence, stop, isSpeaking };
+  return { speak, speakIgbo, speakIgboWord, speakSentence, stop, isSpeaking };
 }

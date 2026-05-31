@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getWordById, type IgboApiWord } from "@/lib/igboApi";
 import { useSavedWords } from "@/hooks/useSavedWords";
+import { VOCAB_PRACTICE_COLUMNS, VOCAB_PRACTICE_COLUMNS_BASIC } from "@/lib/supabaseFunctions";
 
 export type PracticeSource = "all" | "my-words" | "category";
 
@@ -11,6 +12,7 @@ export interface PracticeVocabWord {
   id: string;
   english_translation: string;
   igbo_word: string;
+  audio_url?: string | null;
   example_sentence_igbo?: string | null;
   example_sentence_english?: string | null;
 }
@@ -55,9 +57,7 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
   const { source, categoryId } = usePracticeSourceParams();
   const { savedWords, savedApiWordIds } = useSavedWords();
 
-  const selectFields = includeExamples
-    ? "id, english_translation, igbo_word, example_sentence_igbo, example_sentence_english"
-    : "id, english_translation, igbo_word";
+  const selectFields = includeExamples ? VOCAB_PRACTICE_COLUMNS : VOCAB_PRACTICE_COLUMNS_BASIC;
 
   const { data: allVocabulary, isLoading: loadingAll } = useQuery({
     queryKey: ["vocabulary-practice", includeExamples],

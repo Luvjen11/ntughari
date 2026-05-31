@@ -47,6 +47,10 @@ function stripIgboDiacritics(text: string): string {
     .toLowerCase();
 }
 
+export function stripIgboDiacriticsForCompare(text: string): string {
+  return stripIgboDiacritics(text);
+}
+
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
   if (a.length === 0) return b.length;

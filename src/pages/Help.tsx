@@ -41,7 +41,7 @@ export default function Help() {
           <section>
             <h2 className="font-display text-xl font-semibold mb-2">How do I practice?</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Go to <Link to="/practice" className="font-semibold text-primary hover:underline">Practice</Link> and choose a mode: <strong>English → Igbo</strong> (translate words), <strong>Fill the Gap</strong> (complete sentences with the missing Igbo word), or <strong>Phrase Rebuild</strong> (order words to form phrases). You can practice from all vocabulary, your saved words, or a specific category. Each session is 5 questions. For typed Igbo answers, you get partial credit when you're close — for example, the right word without diacritics still earns points. After finishing, your session is saved to Progress when you're signed in.
+              Go to <Link to="/practice" className="font-semibold text-primary hover:underline">Practice</Link> and choose a mode. <strong>Use This Word</strong> is the daily speaking drill: you get English prompts and write Igbo sentences using a word you've learned — with feedback on word choice, spelling, diacritics, and structure. Other modes include <strong>English → Igbo</strong>, <strong>Fill the Gap</strong>, and <strong>Phrase Rebuild</strong>. You can practice from all vocabulary, your saved words, or a specific category.
             </p>
           </section>
         </div>

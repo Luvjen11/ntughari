@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export type PracticeType = "translation" | "fill_gap" | "phrase_rebuild";
+export type PracticeType = "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word";
 
 interface PracticeItem {
   id: string;

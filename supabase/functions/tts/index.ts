@@ -1,46 +1,44 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
+const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function jsonResponse(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req: Request) => {
+  // CORS preflight — must return 2xx with headers (browser blocks otherwise)
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   try {
     if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     const { text, voice = "Idera", responseFormat = "mp3" } = await req.json();
 
     if (!text || typeof text !== "string") {
-      return new Response(JSON.stringify({ error: "Text is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Text is required" }, 400);
     }
 
     if (text.length > 2000) {
-      return new Response(JSON.stringify({ error: "Text exceeds 2000 character limit" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Text exceeds 2000 character limit" }, 400);
     }
 
     const yarngptApiKey = Deno.env.get("YARNGPT_API_KEY");
     if (!yarngptApiKey) {
       console.error("YARNGPT_API_KEY not set in Supabase secrets");
-      return new Response(JSON.stringify({ error: "TTS service not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "TTS service not configured" }, 500);
     }
 
     const allowedVoices = ["Chinenye", "Nonso", "Idera", "Adaora"];
@@ -64,16 +62,9 @@ serve(async (req: Request) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("YarnGPT API error:", response.status, errorText);
-      return new Response(
-        JSON.stringify({
-          error: "TTS generation failed",
-          details: errorText,
-          status: response.status,
-        }),
-        {
-          status: response.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+      return jsonResponse(
+        { error: "TTS generation failed", details: errorText, status: response.status },
+        response.status >= 400 && response.status < 600 ? response.status : 502
       );
     }
 
@@ -89,12 +80,9 @@ serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("TTS error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error", message: (error as Error).message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+    return jsonResponse(
+      { error: "Internal server error", message: (error as Error).message },
+      500
     );
   }
 });
