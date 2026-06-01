@@ -44,7 +44,7 @@ interface Vocab {
 export default function AdminStoryScenes() {
   const { storyId } = useParams<{ storyId: string }>();
   const queryClient = useQueryClient();
-  const { speakSentence, stop, isSpeaking } = useTTS();
+  const { speakNarration, stop, isSpeaking } = useTTS();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingScene, setEditingScene] = useState<StoryScene | null>(null);
   const [selectedVocabIds, setSelectedVocabIds] = useState<string[]>([]);
@@ -246,7 +246,7 @@ export default function AdminStoryScenes() {
     if (isSpeaking) {
       stop();
     } else {
-      speakSentence(text);
+      speakNarration(text);
     }
   };
 
