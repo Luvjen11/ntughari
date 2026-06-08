@@ -41,7 +41,7 @@ export default function Help() {
           <section>
             <h2 className="font-display text-xl font-semibold mb-2">How do I practice?</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Go to <Link to="/practice" className="font-semibold text-primary hover:underline">Practice</Link> and choose a mode. <strong>Use This Word</strong> is the daily speaking drill: you get English prompts and write Igbo sentences using a word you've learned — with feedback on word choice, spelling, diacritics, and structure. Other modes include <strong>English → Igbo</strong>, <strong>Fill the Gap</strong>, and <strong>Phrase Rebuild</strong>. You can practice from all vocabulary, your saved words, or a specific category.
+              Go to <Link to="/practice" className="font-semibold text-primary hover:underline">Practice</Link> and choose a mode. <strong>Use This Word</strong> is the daily speaking drill: tap the mic, answer in Igbo out loud, and get feedback on word choice, diacritics, and structure. <strong>Conversation Tutor</strong> lets you chat by typing or recording. Other modes include <strong>English → Igbo</strong>, <strong>Fill the Gap</strong>, and <strong>Phrase Rebuild</strong>. Practice from all vocabulary, your saved words, or a specific category. See <Link to="/features" className="font-semibold text-primary hover:underline">Features</Link> for the full list.
             </p>
           </section>
         </div>

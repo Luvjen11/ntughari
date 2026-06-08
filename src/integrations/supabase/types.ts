@@ -135,6 +135,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_feedback: {
+        Row: {
+          category: Database["public"]["Enums"]["feedback_category"]
+          created_at: string
+          id: string
+          message: string
+          status: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          id?: string
+          message: string
+          status?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          id?: string
+          message?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       practice_sessions: {
         Row: {
           created_at: string
@@ -509,6 +554,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_own_account: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
+      submit_anonymous_feedback: {
+        Args: {
+          p_category: Database["public"]["Enums"]["feedback_category"]
+          p_client_token?: string | null
+          p_message: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -519,7 +576,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
+      feedback_category: "issue" | "praise" | "feature"
+      practice_type: "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word"
     }
     CompositeTypes: {
       [_ in never]: never

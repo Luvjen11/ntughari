@@ -1,19 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { BookOpen, MessageSquare, Layers, Type, BookHeart, FolderOpen } from "lucide-react";
+import { BookOpen, MessageSquare, Layers, Type, BookHeart, FolderOpen, Inbox } from "lucide-react";
 
 export default function AdminDashboard() {
   const { data: counts, isLoading } = useQuery({
     queryKey: ["adminCounts"],
     queryFn: async () => {
-      const [letters, vocabulary, skeletons, phrases, stories, categories] = await Promise.all([
+      const [letters, vocabulary, skeletons, phrases, stories, categories, feedbackNew] = await Promise.all([
         supabase.from("letters").select("id", { count: "exact", head: true }),
         supabase.from("vocabulary").select("id", { count: "exact", head: true }),
         supabase.from("sentence_skeletons").select("id", { count: "exact", head: true }),
         supabase.from("phrases").select("id", { count: "exact", head: true }),
         supabase.from("stories").select("id", { count: "exact", head: true }),
         supabase.from("vocab_categories").select("id", { count: "exact", head: true }),
+        supabase.from("user_feedback").select("id", { count: "exact", head: true }).eq("status", "new"),
       ]);
       
       return {
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
         phrases: phrases.count ?? 0,
         stories: stories.count ?? 0,
         categories: categories.count ?? 0,
+        feedbackNew: feedbackNew.count ?? 0,
       };
     },
   });
@@ -34,6 +36,7 @@ export default function AdminDashboard() {
     { title: "Skeletons", count: counts?.skeletons ?? 0, icon: Layers, to: "/admin/skeletons", color: "bg-primary" },
     { title: "Phrases", count: counts?.phrases ?? 0, icon: MessageSquare, to: "/admin/phrases", color: "bg-secondary" },
     { title: "Stories", count: counts?.stories ?? 0, icon: BookHeart, to: "/admin/stories", color: "bg-primary" },
+    { title: "Feedback", count: counts?.feedbackNew ?? 0, icon: Inbox, to: "/admin/feedback", color: "bg-secondary" },
   ];
 
   return (

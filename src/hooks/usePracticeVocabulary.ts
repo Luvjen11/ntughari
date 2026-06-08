@@ -16,6 +16,7 @@ export interface PracticeVocabWord {
   id: string;
   english_translation: string;
   igbo_word: string;
+  word_class?: string | null;
   audio_url?: string | null;
   example_sentence_igbo?: string | null;
   example_sentence_english?: string | null;
@@ -127,11 +128,15 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
           ? snapshotToDisplayWord(id, savedApiSnapshots[id])
           : null);
         if (!w?.word) return null;
+        const example = w.examples?.find((e) => e.igbo && e.english);
         return {
           id: `api-${w.id}`,
           english_translation: firstDef(w) || w.word,
           igbo_word: w.word,
+          word_class: w.wordClass || null,
           audio_url: w.pronunciation || null,
+          example_sentence_igbo: example?.igbo ?? null,
+          example_sentence_english: example?.english ?? null,
         };
       }).filter((row): row is PracticeVocabWord => row != null);
       return [...(savedVocabRows ?? []), ...fromApi];

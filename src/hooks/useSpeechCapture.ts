@@ -33,6 +33,26 @@ function getSpeechRecognition(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/** Prefer Igbo-specialized server ASR; fall back to browser only when server fails. */
+function pickBestTranscript(browser: string, server: string): string {
+  const b = browser.trim();
+  const s = server.trim();
+  if (s && b) {
+    // Server ASR (Whisper / Igbo API) is more reliable for Igbo than browser STT.
+    if (s.length >= b.length * 0.6) return s;
+    // Browser caught noticeably more — merge if server missed the start or end
+    if (b.length > s.length * 1.4) {
+      const bLower = b.toLowerCase();
+      const sLower = s.toLowerCase();
+      if (bLower.includes(sLower)) return b;
+      if (sLower.includes(bLower)) return s;
+      return `${s} ${b}`.trim();
+    }
+    return s;
+  }
+  return s || b;
+}
+
 export function useSpeechCapture() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -46,12 +66,12 @@ export function useSpeechCapture() {
   const finalPartsRef = useRef<string[]>([]);
   const isRecordingRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const transcribeWithServer = useCallback(async (audioBlob: Blob): Promise<string | null> => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (!supabaseUrl || audioBlob.size === 0) return null;
 
-    setIsTranscribing(true);
     try {
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
@@ -67,18 +87,19 @@ export function useSpeechCapture() {
       return data.text?.trim() ?? null;
     } catch {
       return null;
-    } finally {
-      setIsTranscribing(false);
     }
   }, []);
 
   const buildTranscriptFromParts = useCallback((interim = "") => {
     const finals = finalPartsRef.current.join(" ").trim();
-    const combined = interim ? `${finals} ${interim}`.trim() : finals;
-    return combined;
+    return interim ? `${finals} ${interim}`.trim() : finals;
   }, []);
 
   const stopRecognition = useCallback(() => {
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -117,7 +138,10 @@ export function useSpeechCapture() {
         const piece = result[0]?.transcript ?? "";
         if (!piece) continue;
         if (result.isFinal) {
-          finalPartsRef.current.push(piece);
+          const last = finalPartsRef.current[finalPartsRef.current.length - 1];
+          if (last !== piece) {
+            finalPartsRef.current.push(piece);
+          }
         } else {
           interim += piece;
         }
@@ -130,17 +154,21 @@ export function useSpeechCapture() {
     };
 
     recognition.onerror = () => {
-      // Browser STT failed — full audio will go to server ASR on stop
+      // Browser STT is a live preview only; server ASR handles the final transcript.
     };
 
     recognition.onend = () => {
       recognitionRef.current = null;
       if (isRecordingRef.current) {
-        try {
-          startRecognition();
-        } catch {
-          // Mic still recording; server ASR will handle on stop
-        }
+        restartTimerRef.current = setTimeout(() => {
+          if (isRecordingRef.current) {
+            try {
+              startRecognition();
+            } catch {
+              // Server ASR will handle on stop
+            }
+          }
+        }, 300);
       }
     };
 
@@ -159,11 +187,21 @@ export function useSpeechCapture() {
     finalPartsRef.current = [];
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       streamRef.current = stream;
       chunksRef.current = [];
 
-      const mediaRecorder = new MediaRecorder(stream);
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -178,29 +216,32 @@ export function useSpeechCapture() {
         stopRecognition();
 
         const browserText = buildTranscriptFromParts().trim();
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
         chunksRef.current = [];
 
-        let text = browserText;
-        if (audioBlob.size > 0) {
-          const serverText = (await transcribeWithServer(audioBlob)) ?? "";
-          if (serverText.length > text.length) {
-            text = serverText;
-          }
-        }
+        setIsTranscribing(true);
+        const serverText = audioBlob.size > 0 ? (await transcribeWithServer(audioBlob)) ?? "" : "";
+        setIsTranscribing(false);
+
+        const text = pickBestTranscript(browserText, serverText);
 
         if (text) {
           setTranscript(text);
           transcriptRef.current = text;
+        } else if (browserText) {
+          setTranscript(browserText);
+          transcriptRef.current = browserText;
         } else {
-          setError("Couldn't hear you. Speak in one go, then tap Stop — or type your message.");
+          setError(
+            "Couldn't hear you clearly. Speak your full sentence, tap Stop, then try again in a quiet space."
+          );
         }
       };
 
       isRecordingRef.current = true;
       setIsRecording(true);
       startRecognition();
-      mediaRecorder.start(250);
+      mediaRecorder.start();
     } catch {
       isRecordingRef.current = false;
       setError("Microphone access denied. Allow the mic in browser settings.");

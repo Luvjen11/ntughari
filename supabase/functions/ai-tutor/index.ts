@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { chatCompletion, hasLlmProvider, type ChatMessage } from "../_shared/llm.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -79,8 +80,7 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "userText is required" }, 400);
     }
 
-    const llmApiKey = Deno.env.get("LLM_API_KEY");
-    if (!llmApiKey) {
+    if (!hasLlmProvider()) {
       const { igbo, english } = generateRuleBasedReply(userText);
       return jsonResponse({
         reply: igbo,
@@ -100,47 +100,42 @@ Rules:
 - Gently correct mistakes
 - Stay on topic`;
 
-    const messages: { role: string; content: string }[] = [
-      { role: "system", content: systemPrompt },
-      ...conversationHistory.slice(-10).map((m: { role: string; content: string }) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
+    const history: ChatMessage[] = conversationHistory
+      .slice(-10)
+      .map((m: { role: string; content: string }) => ({
+        role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
         content: m.content,
-      })),
-      { role: "user", content: userText },
-    ];
+      }));
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${llmApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages,
-        max_tokens: 200,
-        temperature: 0.7,
-      }),
+    const result = await chatCompletion({
+      system: systemPrompt,
+      messages: [...history, { role: "user", content: userText }],
+      maxTokens: 200,
+      temperature: 0.7,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("LLM API error:", response.status, errorText);
+    if (!result.ok) {
+      console.error("LLM API error:", result.status, result.error);
       const { igbo, english } = generateRuleBasedReply(userText);
       return jsonResponse({
         reply: igbo,
         explanation: english,
         fullReply: `Igbo: ${igbo}\nEnglish: ${english}`,
         source: "rule-based-fallback",
-        llmError: errorText.slice(0, 200),
+        llmError: result.error.slice(0, 200),
       });
     }
 
-    const data = await response.json();
-    const fullReply = data.choices?.[0]?.message?.content ?? "";
-    const { reply, explanation } = parseIgboEnglish(fullReply);
+    const { reply, explanation } = parseIgboEnglish(result.text);
 
-    return jsonResponse({ reply, explanation, fullReply });
+    return jsonResponse({
+      reply,
+      explanation,
+      fullReply: result.text,
+      source: "ai",
+      llmProvider: result.provider,
+      llmModel: result.model,
+    });
   } catch (error) {
     console.error("AI Tutor error:", error);
     return jsonResponse(
