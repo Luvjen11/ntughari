@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      feedback_rate_limit_events: {
+        Row: {
+          created_at: string
+          id: string
+          rate_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rate_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rate_key?: string
+        }
+        Relationships: []
+      }
       letter_examples: {
         Row: {
           created_at: string
@@ -135,51 +153,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_feedback: {
-        Row: {
-          category: Database["public"]["Enums"]["feedback_category"]
-          created_at: string
-          id: string
-          message: string
-          status: string
-        }
-        Insert: {
-          category: Database["public"]["Enums"]["feedback_category"]
-          created_at?: string
-          id?: string
-          message: string
-          status?: string
-        }
-        Update: {
-          category?: Database["public"]["Enums"]["feedback_category"]
-          created_at?: string
-          id?: string
-          message?: string
-          status?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          id: string
-          updated_at: string
-          username: string | null
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          updated_at?: string
-          username?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          updated_at?: string
-          username?: string | null
-        }
-        Relationships: []
-      }
       practice_sessions: {
         Row: {
           created_at: string
@@ -207,6 +180,27 @@ export type Database = {
           score?: number
           total_questions?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -358,6 +352,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_feedback: {
+        Row: {
+          category: Database["public"]["Enums"]["feedback_category"]
+          created_at: string
+          id: string
+          message: string
+          status: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          id?: string
+          message: string
+          status?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          id?: string
+          message?: string
+          status?: string
+        }
+        Relationships: []
       }
       user_progress: {
         Row: {
@@ -542,18 +560,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      delete_own_account: {
-        Args: Record<string, never>
-        Returns: undefined
-      }
-      submit_anonymous_feedback: {
-        Args: {
-          p_category: Database["public"]["Enums"]["feedback_category"]
-          p_client_token?: string | null
-          p_message: string
-        }
-        Returns: undefined
-      }
+      delete_own_account: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -561,11 +568,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      submit_anonymous_feedback: {
+        Args: {
+          p_category: Database["public"]["Enums"]["feedback_category"]
+          p_client_token?: string
+          p_message: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
       feedback_category: "issue" | "praise" | "feature"
-      practice_type: "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word"
+      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -694,6 +709,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      feedback_category: ["issue", "praise", "feature"],
       practice_type: ["translation", "fill_gap", "phrase_rebuild"],
     },
   },
