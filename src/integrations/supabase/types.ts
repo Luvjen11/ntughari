@@ -359,35 +359,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_saved_words: {
-        Row: {
-          created_at: string
-          id: string
-          user_id: string
-          word_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          user_id: string
-          word_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          user_id?: string
-          word_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_saved_words_word_id_fkey"
-            columns: ["word_id"]
-            isOneToOne: false
-            referencedRelation: "vocabulary"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_saved_api_words: {
         Row: {
           created_at: string
@@ -421,6 +392,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_saved_words: {
+        Row: {
+          created_at: string
+          english_gloss: string | null
+          id: string
+          igbo_api_word_id: string
+          igbo_word: string | null
+          pronunciation: string | null
+          user_id: string
+          word_class: string | null
+        }
+        Insert: {
+          created_at?: string
+          english_gloss?: string | null
+          id?: string
+          igbo_api_word_id: string
+          igbo_word?: string | null
+          pronunciation?: string | null
+          user_id: string
+          word_class?: string | null
+        }
+        Update: {
+          created_at?: string
+          english_gloss?: string | null
+          id?: string
+          igbo_api_word_id?: string
+          igbo_word?: string | null
+          pronunciation?: string | null
+          user_id?: string
+          word_class?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_saved_words_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "vocabulary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vocab_categories: {
         Row: {
           created_at: string
@@ -450,7 +462,6 @@ export type Database = {
       }
       vocabulary: {
         Row: {
-          audio_url: string | null
           category_id: string
           created_at: string
           cultural_note: string | null
@@ -462,7 +473,6 @@ export type Database = {
           igbo_word: string
         }
         Insert: {
-          audio_url?: string | null
           category_id: string
           created_at?: string
           cultural_note?: string | null
@@ -474,7 +484,6 @@ export type Database = {
           igbo_word: string
         }
         Update: {
-          audio_url?: string | null
           category_id?: string
           created_at?: string
           cultural_note?: string | null
@@ -510,7 +519,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      practice_type: "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word"
+      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -639,7 +648,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      practice_type: ["translation", "fill_gap", "phrase_rebuild", "use_this_word"],
+      practice_type: ["translation", "fill_gap", "phrase_rebuild"],
     },
   },
 } as const
