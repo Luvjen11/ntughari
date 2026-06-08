@@ -14,8 +14,17 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
+function getOpenAiKey(): string | null {
+  const dedicated = Deno.env.get("OPENAI_API_KEY")?.trim();
+  if (dedicated) return dedicated;
+  const legacy = Deno.env.get("LLM_API_KEY")?.trim();
+  // Anthropic keys (sk-ant-…) cannot be used for Whisper
+  if (legacy && !legacy.startsWith("sk-ant-")) return legacy;
+  return null;
+}
+
 async function transcribeWithOpenAI(audioBlob: Blob): Promise<string | null> {
-  const key = Deno.env.get("LLM_API_KEY") ?? Deno.env.get("OPENAI_API_KEY");
+  const key = getOpenAiKey();
   if (!key) return null;
 
   const formData = new FormData();
@@ -116,7 +125,7 @@ serve(async (req: Request) => {
       return jsonResponse(
         {
           error: "Transcription failed",
-          details: "Set IGBO_API_KEY or LLM_API_KEY (OpenAI Whisper) in Supabase secrets.",
+          details: "Set IGBO_API_KEY and/or OPENAI_API_KEY (Whisper) in Supabase secrets.",
         },
         502
       );

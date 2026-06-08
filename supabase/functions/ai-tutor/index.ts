@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { chatCompletion, hasLlmProvider, type ChatMessage } from "../_shared/llm.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -14,21 +15,41 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-function generateRuleBasedReply(userText: string): string {
+interface TutorReply {
+  igbo: string;
+  english: string;
+}
+
+function generateRuleBasedReply(userText: string): TutorReply {
   const lower = userText.toLowerCase();
   if (lower.includes("hello") || lower.includes("hi") || lower.includes("ndewo")) {
-    return "Ndewo! Ka ọ dị? Olee otú ị dị?";
+    return {
+      igbo: "Ndewo! Ka ọ dị? Olee otú ị dị?",
+      english: "Hello! How are you? How are you doing?",
+    };
   }
   if (lower.includes("how are you") || lower.includes("ka ọ dị")) {
-    return "Adị m mma, na-egọzie! Ị dịkwa?";
+    return {
+      igbo: "Adị m mma, na-egọzie! Ị dịkwa?",
+      english: "I'm fine, thank you! And you?",
+    };
   }
   if (lower.includes("thank") || lower.includes("na-egwu") || lower.includes("daalụ")) {
-    return "Nọ n'ụlọ! Ị na-eme nke ọma!";
+    return {
+      igbo: "Nọ n'ụlọ! Ị na-eme nke ọma!",
+      english: "You're welcome! You're doing great!",
+    };
   }
   if (lower.includes("what") || lower.includes("kedu")) {
-    return "Kedụ ihe ị chọrọ ịmụta taa?";
+    return {
+      igbo: "Kedụ ihe ị chọrọ ịmụta taa?",
+      english: "What would you like to learn today?",
+    };
   }
-  return "Ọ dị mma! Gbalịa ọzọ — ị na-aga n'ihu.";
+  return {
+    igbo: "Ọ dị mma! Gbalịa ọzọ — ị na-aga n'ihu.",
+    english: "That's good! Try again — you're making progress.",
+  };
 }
 
 function parseIgboEnglish(fullReply: string): { reply: string; explanation: string } {
@@ -59,13 +80,13 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "userText is required" }, 400);
     }
 
-    const llmApiKey = Deno.env.get("LLM_API_KEY");
-    if (!llmApiKey) {
-      const reply = generateRuleBasedReply(userText);
+    if (!hasLlmProvider()) {
+      const { igbo, english } = generateRuleBasedReply(userText);
       return jsonResponse({
-        reply,
-        explanation: "Rule-based tutor (set LLM_API_KEY for AI replies).",
-        fullReply: reply,
+        reply: igbo,
+        explanation: english,
+        fullReply: `Igbo: ${igbo}\nEnglish: ${english}`,
+        source: "rule-based",
       });
     }
 
@@ -79,45 +100,42 @@ Rules:
 - Gently correct mistakes
 - Stay on topic`;
 
-    const messages: { role: string; content: string }[] = [
-      { role: "system", content: systemPrompt },
-      ...conversationHistory.slice(-10).map((m: { role: string; content: string }) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
+    const history: ChatMessage[] = conversationHistory
+      .slice(-10)
+      .map((m: { role: string; content: string }) => ({
+        role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
         content: m.content,
-      })),
-      { role: "user", content: userText },
-    ];
+      }));
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${llmApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages,
-        max_tokens: 200,
-        temperature: 0.7,
-      }),
+    const result = await chatCompletion({
+      system: systemPrompt,
+      messages: [...history, { role: "user", content: userText }],
+      maxTokens: 200,
+      temperature: 0.7,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("LLM API error:", response.status, errorText);
-      const reply = generateRuleBasedReply(userText);
+    if (!result.ok) {
+      console.error("LLM API error:", result.status, result.error);
+      const { igbo, english } = generateRuleBasedReply(userText);
       return jsonResponse({
-        reply,
-        explanation: "AI temporarily unavailable — here's a practice reply.",
-        fullReply: reply,
+        reply: igbo,
+        explanation: english,
+        fullReply: `Igbo: ${igbo}\nEnglish: ${english}`,
+        source: "rule-based-fallback",
+        llmError: result.error.slice(0, 200),
       });
     }
 
-    const data = await response.json();
-    const fullReply = data.choices?.[0]?.message?.content ?? "";
-    const { reply, explanation } = parseIgboEnglish(fullReply);
+    const { reply, explanation } = parseIgboEnglish(result.text);
 
-    return jsonResponse({ reply, explanation, fullReply });
+    return jsonResponse({
+      reply,
+      explanation,
+      fullReply: result.text,
+      source: "ai",
+      llmProvider: result.provider,
+      llmModel: result.model,
+    });
   } catch (error) {
     console.error("AI Tutor error:", error);
     return jsonResponse(

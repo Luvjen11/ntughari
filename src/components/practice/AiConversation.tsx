@@ -35,6 +35,8 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
   const [autoSend, setAutoSend] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastSpokenRef = useRef<string | null>(null);
+  const wasRecordingRef = useRef(false);
+  const lastAutoSentRef = useRef("");
 
   const { speakSentence, isSpeaking } = useTTS();
   const {
@@ -140,10 +142,20 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
   );
 
   useEffect(() => {
-    if (autoSend && transcript.trim() && !isRecording && !isTranscribing && !loading) {
+    const finishedRecording = wasRecordingRef.current && !isRecording && !isTranscribing;
+    wasRecordingRef.current = isRecording;
+
+    if (
+      autoSend &&
+      finishedRecording &&
+      transcript.trim() &&
+      !loading &&
+      transcript !== lastAutoSentRef.current
+    ) {
       const t = setTimeout(() => {
+        lastAutoSentRef.current = transcript;
         void sendMessage(transcript);
-      }, 600);
+      }, 800);
       return () => clearTimeout(t);
     }
   }, [autoSend, transcript, isRecording, isTranscribing, loading, sendMessage]);
@@ -238,7 +250,7 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
               </Button>
               {isRecording && (
                 <span className="text-sm text-destructive font-medium self-center animate-pulse">
-                  Listening…
+                  Recording… tap Stop when finished
                 </span>
               )}
             </div>
@@ -256,7 +268,7 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type or record in Igbo or English…"
+            placeholder="Type or tap Record, speak your full message, then tap Stop…"
             className="w-full p-3 border-2 border-foreground rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary min-h-[72px] bg-background"
             rows={2}
             disabled={loading}

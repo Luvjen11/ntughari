@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.asr]
 verify_jwt = false
+
+[functions.speaking-feedback]
+verify_jwt = false

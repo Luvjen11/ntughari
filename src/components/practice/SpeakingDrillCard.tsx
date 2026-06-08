@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Mic, MicOff, Sparkles, Volume2, X } from "lucide-react";
-import { gradeIgboSentence, type SentenceGradeResult } from "@/lib/gradeIgboSentence";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, Loader2, Mic, MicOff, Sparkles, Volume2, X } from "lucide-react";
+import type { SentenceGradeResult } from "@/lib/gradeIgboSentence";
 import { useSpeechCapture } from "@/hooks/useSpeechCapture";
+import { useSpeakingFeedback } from "@/hooks/useSpeakingFeedback";
 import { useTTS } from "@/hooks/useTTS";
 
 interface SpeakingDrillCardProps {
   targetWord: string;
   englishPrompt: string;
+  glossHint?: string;
   referenceIgbo: string | null;
   recordedUrl?: string | null;
   onAnswer: (scorePercent: number) => void;
@@ -30,27 +33,46 @@ function renderFeedback(text: string) {
 export function SpeakingDrillCard({
   targetWord,
   englishPrompt,
+  glossHint,
   referenceIgbo,
   recordedUrl,
   onAnswer,
 }: SpeakingDrillCardProps) {
   const [submitted, setSubmitted] = useState(false);
   const [grade, setGrade] = useState<SentenceGradeResult | null>(null);
+  const [feedbackSource, setFeedbackSource] = useState<string | null>(null);
   const { speakIgboWord, speakSentence, isSpeaking } = useTTS();
+  const speakingFeedback = useSpeakingFeedback();
   const {
     isRecording,
     isTranscribing,
     transcript,
+    setTranscript,
     error: captureError,
     toggleRecording,
     clearTranscript,
   } = useSpeechCapture();
 
-  const handleSubmit = () => {
+  const isGrading = speakingFeedback.isPending;
+
+  const handleSubmit = async () => {
     if (transcript.trim()) {
-      const result = gradeIgboSentence(transcript, targetWord, referenceIgbo, englishPrompt);
-      setGrade(result);
       setSubmitted(true);
+      setGrade(null);
+      setFeedbackSource(null);
+      try {
+        const result = await speakingFeedback.mutateAsync({
+          userSentence: transcript.trim(),
+          targetWord,
+          englishPrompt,
+          referenceIgbo,
+          glossHint,
+        });
+        setGrade(result);
+        setFeedbackSource(result.source ?? null);
+      } catch {
+        setSubmitted(false);
+      }
       return;
     }
     setSubmitted(true);
@@ -71,12 +93,14 @@ export function SpeakingDrillCard({
       },
       correctedSentence: referenceIgbo,
     });
+    setFeedbackSource("self-check");
   };
 
   const handleSelfCheckGotIt = () => {
     onAnswer(85);
     setSubmitted(false);
     setGrade(null);
+    setFeedbackSource(null);
     clearTranscript();
   };
 
@@ -84,6 +108,7 @@ export function SpeakingDrillCard({
     onAnswer(grade?.scorePercent ?? 0);
     setSubmitted(false);
     setGrade(null);
+    setFeedbackSource(null);
     clearTranscript();
   };
 
@@ -105,9 +130,12 @@ export function SpeakingDrillCard({
   return (
     <Card className="border-2 border-border">
       <CardContent className="p-6">
-        <p className="text-sm text-muted-foreground mb-1">Say a sentence in Igbo using:</p>
-        <p className="text-2xl font-bold text-primary mb-1">{targetWord}</p>
-        <p className="text-lg font-medium mb-4">&ldquo;{englishPrompt}&rdquo;</p>
+        <p className="text-sm text-muted-foreground mb-2">Say this in Igbo:</p>
+        <p className="text-lg font-medium leading-relaxed mb-3">{englishPrompt}</p>
+        <p className="text-sm text-muted-foreground mb-4">
+          Use <span className="font-bold text-primary">{targetWord}</span>
+          {glossHint ? ` (${glossHint})` : ""}
+        </p>
 
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
@@ -115,7 +143,7 @@ export function SpeakingDrillCard({
               type="button"
               variant={isRecording ? "destructive" : "outline"}
               onClick={toggleRecording}
-              disabled={submitted || isTranscribing}
+              disabled={submitted || isTranscribing || isGrading}
               className="border-2 flex-1 min-w-[140px]"
             >
               {isRecording ? (
@@ -135,7 +163,7 @@ export function SpeakingDrillCard({
                 type="button"
                 variant="outline"
                 onClick={playModel}
-                disabled={isSpeaking || submitted}
+                disabled={isSpeaking || submitted || isGrading}
                 className="border-2"
               >
                 <Volume2 className="h-4 w-4 mr-2" />
@@ -153,13 +181,24 @@ export function SpeakingDrillCard({
           )}
 
           {transcript && !submitted && (
-            <div className="rounded-lg border-2 border-foreground/20 bg-muted p-3">
-              <p className="text-xs text-muted-foreground mb-1">What we heard:</p>
-              <p className="font-medium">{transcript}</p>
+            <div className="rounded-lg border-2 border-foreground/20 bg-muted p-3 space-y-2">
+              <p className="text-xs text-muted-foreground">What we heard — fix any mistakes before checking:</p>
+              <Textarea
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                className="min-h-[72px] border-2 bg-background"
+              />
             </div>
           )}
 
-          {submitted && grade && (
+          {isGrading && (
+            <div className="flex items-center gap-3 rounded-lg border-2 border-foreground/20 bg-muted p-4">
+              <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+              <p className="text-sm text-muted-foreground">Coach is reviewing your sentence…</p>
+            </div>
+          )}
+
+          {submitted && grade && !isGrading && (
             <div className={`p-4 rounded-lg border-2 ${feedbackStyles}`}>
               <div className="flex items-center gap-2 mb-2">
                 {isStrong ? (
@@ -181,6 +220,29 @@ export function SpeakingDrillCard({
                   </>
                 )}
               </div>
+
+              {transcript.trim() && (
+                <p className="text-sm mb-3 pb-3 border-b border-foreground/10">
+                  <span className="text-muted-foreground">You said: </span>
+                  <span className="font-medium">{transcript.trim()}</span>
+                </p>
+              )}
+
+              {grade.feedbackLines.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">
+                    Coach feedback
+                  </p>
+                  <ul className="space-y-1.5">
+                    {grade.feedbackLines.map((line, i) => (
+                      <li key={i} className="text-sm leading-relaxed flex gap-2">
+                        <span className="text-primary shrink-0">•</span>
+                        <span>{renderFeedback(line)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {transcript.trim() &&
                 (["wordChoice", "spelling", "diacritics", "structure"] as const).map((key) => {
@@ -207,39 +269,41 @@ export function SpeakingDrillCard({
                   );
                 })}
 
-              {grade.feedbackLines.map((line, i) => (
-                <p key={i} className="text-sm text-muted-foreground mb-1">
-                  {renderFeedback(line)}
-                </p>
-              ))}
-
               {grade.correctedSentence && !isStrong && (
-                <p className="text-sm mt-2">
-                  Model sentence:{" "}
+                <p className="text-sm mt-2 pt-2 border-t border-foreground/10">
+                  <span className="text-muted-foreground">Suggested sentence: </span>
                   <span className="font-medium text-foreground">{grade.correctedSentence}</span>
                 </p>
               )}
 
-              <p className="text-sm text-muted-foreground mt-2">{grade.scorePercent}% for this prompt</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {grade.scorePercent}% for this prompt
+                {feedbackSource === "ai" && " · AI coach"}
+              </p>
             </div>
           )}
 
           {!submitted ? (
             <div className="space-y-2">
               <Button
-                onClick={handleSubmit}
-                disabled={isRecording || isTranscribing}
+                onClick={() => void handleSubmit()}
+                disabled={isRecording || isTranscribing || isGrading}
                 className="w-full"
               >
                 {transcript.trim() ? "Check my answer" : "Compare without transcript"}
               </Button>
+              {transcript.trim() && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Your sentence will be reviewed by the Igbo coach for specific feedback.
+                </p>
+              )}
               {!transcript.trim() && (
                 <p className="text-xs text-center text-muted-foreground">
                   No transcript? Use compare to hear the model and mark yourself.
                 </p>
               )}
             </div>
-          ) : !transcript.trim() && submitted ? (
+          ) : !transcript.trim() && submitted && grade ? (
             <div className="flex gap-2">
               <Button onClick={handleSelfCheckGotIt} className="flex-1">
                 I said it well
@@ -249,17 +313,18 @@ export function SpeakingDrillCard({
                 onClick={() => {
                   setSubmitted(false);
                   setGrade(null);
+                  setFeedbackSource(null);
                 }}
                 className="flex-1 border-2"
               >
                 Try again
               </Button>
             </div>
-          ) : (
+          ) : submitted && grade && !isGrading ? (
             <Button onClick={handleNext} className="w-full">
               Continue
             </Button>
-          )}
+          ) : null}
         </div>
       </CardContent>
     </Card>

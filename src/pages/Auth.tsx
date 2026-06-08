@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Lock, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, Lock, ArrowLeft, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
+import { validateUsername } from "@/lib/username";
 
-const authSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
@@ -18,8 +19,9 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; username?: string }>({});
   
   const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
@@ -33,15 +35,22 @@ export default function Auth() {
   }, [user, loading, navigate]);
 
   const validateForm = () => {
-    const result = authSchema.safeParse({ email, password });
+    const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
-      const fieldErrors: { email?: string; password?: string } = {};
+      const fieldErrors: { email?: string; password?: string; username?: string } = {};
       result.error.errors.forEach((err) => {
         if (err.path[0] === "email") fieldErrors.email = err.message;
         if (err.path[0] === "password") fieldErrors.password = err.message;
       });
       setErrors(fieldErrors);
       return false;
+    }
+    if (!isLogin) {
+      const usernameError = validateUsername(username);
+      if (usernameError) {
+        setErrors({ username: usernameError });
+        return false;
+      }
     }
     setErrors({});
     return true;
@@ -57,7 +66,7 @@ export default function Auth() {
     try {
       const { error } = isLogin 
         ? await signIn(email, password)
-        : await signUp(email, password);
+        : await signUp(email, password, username);
 
       if (error) {
         let message = error.message;
@@ -150,6 +159,31 @@ export default function Auth() {
               )}
             </div>
 
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="username" className="font-display font-semibold">
+                  Username
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="ada_learner"
+                    className="pl-10 border-[3px] border-foreground focus:ring-primary"
+                    disabled={isSubmitting}
+                    autoComplete="username"
+                  />
+                </div>
+                {errors.username && (
+                  <p className="text-sm text-destructive">{errors.username}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Letters, numbers, and underscores only.</p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="password" className="font-display font-semibold">
                 Password
@@ -197,6 +231,7 @@ export default function Auth() {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setErrors({});
+                setUsername("");
               }}
               className="font-display font-semibold text-primary hover:text-primary/80 transition-colors mt-1"
             >

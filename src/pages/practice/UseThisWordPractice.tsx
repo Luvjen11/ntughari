@@ -22,7 +22,7 @@ function shuffleArray<T>(array: T[]): T[] {
 
 export default function UseThisWordPractice() {
   const navigate = useNavigate();
-  const { vocabulary, isLoading, source } = usePracticeVocabulary();
+  const { vocabulary, isLoading, source } = usePracticeVocabulary({ includeExamples: true });
   const { speakIgboWord, isSpeaking } = useTTS();
   const [focusWord, setFocusWord] = useState<(typeof vocabulary)[0] | null>(null);
   const [drills, setDrills] = useState<SpeakingDrill[]>([]);
@@ -128,6 +128,7 @@ export default function UseThisWordPractice() {
               <SpeakingDrillCard
                 targetWord={focusWord.igbo_word}
                 englishPrompt={currentDrill.englishPrompt}
+                glossHint={currentDrill.glossHint}
                 referenceIgbo={currentDrill.referenceIgbo}
                 recordedUrl={focusWord.audio_url}
                 onAnswer={(scorePercent) => recordAnswer(currentDrill.id, scorePercent)}

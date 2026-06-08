@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { AdminRoute } from "@/components/AdminRoute";
 import Index from "./pages/Index";
 import Alphabet from "./pages/Alphabet";
@@ -31,6 +32,11 @@ import Stories from "./pages/Stories";
 import StoryPlayer from "./pages/StoryPlayer";
 import MyWords from "./pages/MyWords";
 import Help from "./pages/Help";
+import Features from "./pages/Features";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import Feedback from "./pages/Feedback";
+import AdminFeedback from "./pages/admin/AdminFeedback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,12 +48,18 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <div className="min-h-screen flex flex-col">
           <Navigation />
+          <main className="flex-1">
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/alphabet" element={<Alphabet />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/feedback" element={<Feedback />} />
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
             <Route path="/auth" element={<Auth />} />
@@ -63,6 +75,7 @@ const App = () => (
             <Route path="/stories" element={<Stories />} />
             <Route path="/story/:storyId" element={<StoryPlayer />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
             <Route path="/admin/letters" element={<AdminRoute><AdminLetters /></AdminRoute>} />
             <Route path="/admin/vocabulary" element={<AdminRoute><AdminVocabulary /></AdminRoute>} />
             <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
@@ -72,6 +85,9 @@ const App = () => (
             <Route path="/admin/stories/:storyId/scenes" element={<AdminRoute><AdminStoryScenes /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </main>
+          <Footer />
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
