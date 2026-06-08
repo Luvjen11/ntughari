@@ -14,21 +14,41 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-function generateRuleBasedReply(userText: string): string {
+interface TutorReply {
+  igbo: string;
+  english: string;
+}
+
+function generateRuleBasedReply(userText: string): TutorReply {
   const lower = userText.toLowerCase();
   if (lower.includes("hello") || lower.includes("hi") || lower.includes("ndewo")) {
-    return "Ndewo! Ka ọ dị? Olee otú ị dị?";
+    return {
+      igbo: "Ndewo! Ka ọ dị? Olee otú ị dị?",
+      english: "Hello! How are you? How are you doing?",
+    };
   }
   if (lower.includes("how are you") || lower.includes("ka ọ dị")) {
-    return "Adị m mma, na-egọzie! Ị dịkwa?";
+    return {
+      igbo: "Adị m mma, na-egọzie! Ị dịkwa?",
+      english: "I'm fine, thank you! And you?",
+    };
   }
   if (lower.includes("thank") || lower.includes("na-egwu") || lower.includes("daalụ")) {
-    return "Nọ n'ụlọ! Ị na-eme nke ọma!";
+    return {
+      igbo: "Nọ n'ụlọ! Ị na-eme nke ọma!",
+      english: "You're welcome! You're doing great!",
+    };
   }
   if (lower.includes("what") || lower.includes("kedu")) {
-    return "Kedụ ihe ị chọrọ ịmụta taa?";
+    return {
+      igbo: "Kedụ ihe ị chọrọ ịmụta taa?",
+      english: "What would you like to learn today?",
+    };
   }
-  return "Ọ dị mma! Gbalịa ọzọ — ị na-aga n'ihu.";
+  return {
+    igbo: "Ọ dị mma! Gbalịa ọzọ — ị na-aga n'ihu.",
+    english: "That's good! Try again — you're making progress.",
+  };
 }
 
 function parseIgboEnglish(fullReply: string): { reply: string; explanation: string } {
@@ -61,11 +81,12 @@ serve(async (req: Request) => {
 
     const llmApiKey = Deno.env.get("LLM_API_KEY");
     if (!llmApiKey) {
-      const reply = generateRuleBasedReply(userText);
+      const { igbo, english } = generateRuleBasedReply(userText);
       return jsonResponse({
-        reply,
-        explanation: "Rule-based tutor (set LLM_API_KEY for AI replies).",
-        fullReply: reply,
+        reply: igbo,
+        explanation: english,
+        fullReply: `Igbo: ${igbo}\nEnglish: ${english}`,
+        source: "rule-based",
       });
     }
 
@@ -105,11 +126,13 @@ Rules:
     if (!response.ok) {
       const errorText = await response.text();
       console.error("LLM API error:", response.status, errorText);
-      const reply = generateRuleBasedReply(userText);
+      const { igbo, english } = generateRuleBasedReply(userText);
       return jsonResponse({
-        reply,
-        explanation: "AI temporarily unavailable — here's a practice reply.",
-        fullReply: reply,
+        reply: igbo,
+        explanation: english,
+        fullReply: `Igbo: ${igbo}\nEnglish: ${english}`,
+        source: "rule-based-fallback",
+        llmError: errorText.slice(0, 200),
       });
     }
 

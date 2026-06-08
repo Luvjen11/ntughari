@@ -1,17 +1,29 @@
 import { useCallback, useRef, useState } from "react";
 import { supabaseFunctionAuthHeaders } from "@/lib/supabaseFunctions";
 
-type SpeechRecognitionCtor = new () => {
+type SpeechRecognitionResult = {
+  isFinal: boolean;
+  0: { transcript: string };
+};
+
+type SpeechRecognitionEvent = {
+  resultIndex: number;
+  results: SpeechRecognitionResult[];
+};
+
+type SpeechRecognitionInstance = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
-  onresult: ((event: { results: { [index: number]: { [index: number]: { transcript: string } } }; length: number }) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
   onerror: (() => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;
 };
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionInstance;
 
 function getSpeechRecognition(): SpeechRecognitionCtor | null {
   const w = window as Window & {
@@ -29,8 +41,11 @@ export function useSpeechCapture() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const transcriptRef = useRef("");
+  const finalPartsRef = useRef<string[]>([]);
+  const isRecordingRef = useRef(false);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const transcribeWithServer = useCallback(async (audioBlob: Blob): Promise<string | null> => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -57,22 +72,95 @@ export function useSpeechCapture() {
     }
   }, []);
 
+  const buildTranscriptFromParts = useCallback((interim = "") => {
+    const finals = finalPartsRef.current.join(" ").trim();
+    const combined = interim ? `${finals} ${interim}`.trim() : finals;
+    return combined;
+  }, []);
+
+  const stopRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        recognitionRef.current.abort();
+      }
+      recognitionRef.current = null;
+    }
+  }, []);
+
   const stopRecording = useCallback(() => {
-    recognitionRef.current?.stop();
+    isRecordingRef.current = false;
+    stopRecognition();
     if (mediaRecorderRef.current?.state === "recording") {
       mediaRecorderRef.current.stop();
     } else {
       setIsRecording(false);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
-  }, []);
+  }, [stopRecognition]);
+
+  const startRecognition = useCallback(() => {
+    const Recognition = getSpeechRecognition();
+    if (!Recognition || !isRecordingRef.current) return;
+
+    const recognition = new Recognition();
+    recognition.lang = "ig-NG";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const piece = result[0]?.transcript ?? "";
+        if (!piece) continue;
+        if (result.isFinal) {
+          finalPartsRef.current.push(piece);
+        } else {
+          interim += piece;
+        }
+      }
+      const combined = buildTranscriptFromParts(interim);
+      if (combined) {
+        transcriptRef.current = combined;
+        setTranscript(combined);
+      }
+    };
+
+    recognition.onerror = () => {
+      // Browser STT failed — full audio will go to server ASR on stop
+    };
+
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      if (isRecordingRef.current) {
+        try {
+          startRecognition();
+        } catch {
+          // Mic still recording; server ASR will handle on stop
+        }
+      }
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+    }
+  }, [buildTranscriptFromParts]);
 
   const startRecording = useCallback(async () => {
     setError(null);
     setTranscript("");
     transcriptRef.current = "";
+    finalPartsRef.current = [];
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       chunksRef.current = [];
 
       const mediaRecorder = new MediaRecorder(stream);
@@ -84,56 +172,41 @@ export function useSpeechCapture() {
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        isRecordingRef.current = false;
         setIsRecording(false);
+        stopRecognition();
 
-        let text = transcriptRef.current.trim();
+        const browserText = buildTranscriptFromParts().trim();
         const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
         chunksRef.current = [];
 
-        if (!text && audioBlob.size > 0) {
-          text = (await transcribeWithServer(audioBlob)) ?? "";
+        let text = browserText;
+        if (audioBlob.size > 0) {
+          const serverText = (await transcribeWithServer(audioBlob)) ?? "";
+          if (serverText.length > text.length) {
+            text = serverText;
+          }
         }
 
         if (text) {
           setTranscript(text);
           transcriptRef.current = text;
         } else {
-          setError("Couldn't hear you. Try again, speak clearly, or use self-check below.");
+          setError("Couldn't hear you. Speak in one go, then tap Stop — or type your message.");
         }
       };
 
-      const Recognition = getSpeechRecognition();
-      if (Recognition) {
-        const recognition = new Recognition();
-        recognition.lang = "ig-NG";
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.onresult = (event) => {
-          let combined = "";
-          for (let i = 0; i < event.results.length; i++) {
-            combined += event.results[i][0].transcript;
-          }
-          const t = combined.trim();
-          if (t) {
-            transcriptRef.current = t;
-            setTranscript(t);
-          }
-        };
-        recognitionRef.current = recognition;
-        try {
-          recognition.start();
-        } catch {
-          recognitionRef.current = null;
-        }
-      }
-
-      mediaRecorder.start();
+      isRecordingRef.current = true;
       setIsRecording(true);
+      startRecognition();
+      mediaRecorder.start(250);
     } catch {
+      isRecordingRef.current = false;
       setError("Microphone access denied. Allow the mic in browser settings.");
       setIsRecording(false);
     }
-  }, [transcribeWithServer]);
+  }, [buildTranscriptFromParts, startRecognition, stopRecognition, transcribeWithServer]);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) stopRecording();
@@ -143,6 +216,7 @@ export function useSpeechCapture() {
   const clearTranscript = useCallback(() => {
     setTranscript("");
     transcriptRef.current = "";
+    finalPartsRef.current = [];
     setError(null);
   }, []);
 
