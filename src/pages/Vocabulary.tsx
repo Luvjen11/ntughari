@@ -439,7 +439,7 @@ export default function Vocabulary() {
                           </div>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => toggleSaveApiWord(w.id)}
+                              onClick={() => toggleSaveApiWord(w.id, w)}
                               className={`p-2 rounded-lg border-2 border-foreground transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5
                                 ${isApiWordSaved(w.id) ? "bg-secondary" : "bg-card hover:bg-muted"}`}
                               title={isApiWordSaved(w.id) ? "Unsave" : "Save to My Words"}

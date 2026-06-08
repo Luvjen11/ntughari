@@ -3,3 +3,9 @@ project_id = "xclufignreasnzhtlxki"
 # Allow browser preflight + anon-key calls from the Vite dev server
 [functions.tts]
 verify_jwt = false
+
+[functions.ai-tutor]
+verify_jwt = false
+
+[functions.asr]
+verify_jwt = false
