@@ -2,27 +2,54 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  type IgboApiWord,
+  type IgboApiWordSnapshot,
+  igboApiWordToSnapshot,
+} from "@/lib/igboApi";
 
-// Hook to manage saved words - uses database for logged-in users, localStorage for guests
-// Supports both Supabase vocabulary (word_id) and Igbo API words (igbo_api_word_id)
+export type SavedApiWordSnapshots = Record<string, IgboApiWordSnapshot>;
+
+const API_SNAPSHOT_SELECT =
+  "igbo_api_word_id, igbo_word, english_gloss, word_class, pronunciation";
+
+function rowToSnapshot(row: {
+  igbo_word: string | null;
+  english_gloss: string | null;
+  word_class: string | null;
+  pronunciation: string | null;
+}): IgboApiWordSnapshot | null {
+  if (!row.igbo_word?.trim()) return null;
+  return {
+    igbo_word: row.igbo_word,
+    english_gloss: row.english_gloss ?? row.igbo_word,
+    word_class: row.word_class ?? undefined,
+    pronunciation: row.pronunciation ?? undefined,
+  };
+}
 
 export function useSavedWords() {
   const { user } = useAuth();
   const [localSavedWords, setLocalSavedWords] = useLocalStorage<string[]>("savedWords", []);
   const [localSavedApiWordIds, setLocalSavedApiWordIds] = useLocalStorage<string[]>("savedApiWords", []);
+  const [localApiSnapshots, setLocalApiSnapshots] = useLocalStorage<SavedApiWordSnapshots>(
+    "savedApiWordSnapshots",
+    {}
+  );
   const [dbSavedWords, setDbSavedWords] = useState<string[]>([]);
   const [dbSavedApiWordIds, setDbSavedApiWordIds] = useState<string[]>([]);
+  const [dbApiSnapshots, setDbApiSnapshots] = useState<SavedApiWordSnapshots>({});
   const [loading, setLoading] = useState(false);
 
-  // The actual saved words - from DB if logged in, localStorage otherwise
   const savedWords = user ? dbSavedWords : localSavedWords;
   const savedApiWordIds = user ? dbSavedApiWordIds : localSavedApiWordIds;
+  const savedApiSnapshots = user ? dbApiSnapshots : localApiSnapshots;
 
-  // Fetch saved words (Supabase + API) from database when user logs in
   useEffect(() => {
     if (!user) {
       setDbSavedWords([]);
       setDbSavedApiWordIds([]);
+      setDbApiSnapshots({});
       return;
     }
 
@@ -30,14 +57,22 @@ export function useSavedWords() {
       setLoading(true);
       const [wordsRes, apiWordsRes] = await Promise.all([
         supabase.from("user_saved_words").select("word_id").eq("user_id", user.id),
-        supabase.from("user_saved_api_words").select("igbo_api_word_id").eq("user_id", user.id),
+        supabase.from("user_saved_api_words").select(API_SNAPSHOT_SELECT).eq("user_id", user.id),
       ]);
 
       if (!wordsRes.error && wordsRes.data) {
         setDbSavedWords(wordsRes.data.map((item) => item.word_id));
       }
       if (!apiWordsRes.error && apiWordsRes.data) {
-        setDbSavedApiWordIds(apiWordsRes.data.map((item) => item.igbo_api_word_id));
+        const ids: string[] = [];
+        const snapshots: SavedApiWordSnapshots = {};
+        for (const row of apiWordsRes.data) {
+          ids.push(row.igbo_api_word_id);
+          const snap = rowToSnapshot(row);
+          if (snap) snapshots[row.igbo_api_word_id] = snap;
+        }
+        setDbSavedApiWordIds(ids);
+        setDbApiSnapshots(snapshots);
       }
       setLoading(false);
     };
@@ -45,12 +80,10 @@ export function useSavedWords() {
     fetchSavedWords();
   }, [user]);
 
-  // Migrate localStorage words to DB when user logs in
   useEffect(() => {
     if (!user || localSavedWords.length === 0) return;
 
     const migrateWords = async () => {
-      // Get existing DB words to avoid duplicates
       const { data: existing } = await supabase
         .from("user_saved_words")
         .select("word_id")
@@ -60,17 +93,12 @@ export function useSavedWords() {
       const wordsToMigrate = localSavedWords.filter((id) => !existingIds.has(id));
 
       if (wordsToMigrate.length > 0) {
-        const inserts = wordsToMigrate.map((word_id) => ({
-          user_id: user.id,
-          word_id,
-        }));
-
-        const { error } = await supabase.from("user_saved_words").insert(inserts);
+        const { error } = await supabase.from("user_saved_words").insert(
+          wordsToMigrate.map((word_id) => ({ user_id: user.id, word_id }))
+        );
 
         if (!error) {
-          // Clear localStorage after successful migration
           setLocalSavedWords([]);
-          // Refresh DB words
           setDbSavedWords((prev) => [...prev, ...wordsToMigrate]);
         }
       }
@@ -79,7 +107,6 @@ export function useSavedWords() {
     migrateWords();
   }, [user, localSavedWords, setLocalSavedWords]);
 
-  // Migrate localStorage API words to DB when user logs in
   useEffect(() => {
     if (!user || localSavedApiWordIds.length === 0) return;
 
@@ -93,27 +120,42 @@ export function useSavedWords() {
       const toMigrate = localSavedApiWordIds.filter((id) => !existingIds.has(id));
 
       if (toMigrate.length > 0) {
-        const { error } = await supabase.from("user_saved_api_words").insert(
-          toMigrate.map((igbo_api_word_id) => ({ user_id: user.id, igbo_api_word_id }))
-        );
+        const inserts = toMigrate.map((igbo_api_word_id) => {
+          const snap = localApiSnapshots[igbo_api_word_id];
+          return {
+            user_id: user.id,
+            igbo_api_word_id,
+            igbo_word: snap?.igbo_word ?? null,
+            english_gloss: snap?.english_gloss ?? null,
+            word_class: snap?.word_class ?? null,
+            pronunciation: snap?.pronunciation ?? null,
+          };
+        });
+        const { error } = await supabase.from("user_saved_api_words").insert(inserts);
         if (!error) {
           setLocalSavedApiWordIds([]);
+          setLocalApiSnapshots({});
           setDbSavedApiWordIds((prev) => [...new Set([...prev, ...toMigrate])]);
+          setDbApiSnapshots((prev) => {
+            const next = { ...prev };
+            for (const id of toMigrate) {
+              if (localApiSnapshots[id]) next[id] = localApiSnapshots[id];
+            }
+            return next;
+          });
         }
       }
     };
 
     migrateApiWords();
-  }, [user, localSavedApiWordIds, setLocalSavedApiWordIds]);
+  }, [user, localSavedApiWordIds, localApiSnapshots, setLocalSavedApiWordIds, setLocalApiSnapshots]);
 
   const toggleSaveWord = useCallback(
     async (wordId: string) => {
       if (user) {
-        // Database operation
         const isSaved = dbSavedWords.includes(wordId);
 
         if (isSaved) {
-          // Remove from DB
           const { error } = await supabase
             .from("user_saved_words")
             .delete()
@@ -124,7 +166,6 @@ export function useSavedWords() {
             setDbSavedWords((prev) => prev.filter((id) => id !== wordId));
           }
         } else {
-          // Add to DB
           const { error } = await supabase
             .from("user_saved_words")
             .insert({ user_id: user.id, word_id: wordId });
@@ -134,11 +175,8 @@ export function useSavedWords() {
           }
         }
       } else {
-        // localStorage operation (guest mode)
         setLocalSavedWords((prev) =>
-          prev.includes(wordId)
-            ? prev.filter((id) => id !== wordId)
-            : [...prev, wordId]
+          prev.includes(wordId) ? prev.filter((id) => id !== wordId) : [...prev, wordId]
         );
       }
     },
@@ -151,7 +189,9 @@ export function useSavedWords() {
   );
 
   const toggleSaveApiWord = useCallback(
-    async (apiWordId: string) => {
+    async (apiWordId: string, word?: IgboApiWord) => {
+      const snapshot = word ? igboApiWordToSnapshot(word) : undefined;
+
       if (user) {
         const isSaved = dbSavedApiWordIds.includes(apiWordId);
         if (isSaved) {
@@ -162,24 +202,45 @@ export function useSavedWords() {
             .eq("igbo_api_word_id", apiWordId);
           if (!error) {
             setDbSavedApiWordIds((prev) => prev.filter((id) => id !== apiWordId));
+            setDbApiSnapshots((prev) => {
+              const next = { ...prev };
+              delete next[apiWordId];
+              return next;
+            });
           }
         } else {
-          const { error } = await supabase
-            .from("user_saved_api_words")
-            .insert({ user_id: user.id, igbo_api_word_id: apiWordId });
+          const { error } = await supabase.from("user_saved_api_words").insert({
+            user_id: user.id,
+            igbo_api_word_id: apiWordId,
+            igbo_word: snapshot?.igbo_word ?? null,
+            english_gloss: snapshot?.english_gloss ?? null,
+            word_class: snapshot?.word_class ?? null,
+            pronunciation: snapshot?.pronunciation ?? null,
+          });
           if (!error) {
             setDbSavedApiWordIds((prev) => [...prev, apiWordId]);
+            if (snapshot) {
+              setDbApiSnapshots((prev) => ({ ...prev, [apiWordId]: snapshot }));
+            }
           }
         }
       } else {
+        const removing = localSavedApiWordIds.includes(apiWordId);
         setLocalSavedApiWordIds((prev) =>
-          prev.includes(apiWordId)
-            ? prev.filter((id) => id !== apiWordId)
-            : [...prev, apiWordId]
+          removing ? prev.filter((id) => id !== apiWordId) : [...prev, apiWordId]
         );
+        setLocalApiSnapshots((prev) => {
+          const next = { ...prev };
+          if (removing) {
+            delete next[apiWordId];
+          } else if (snapshot) {
+            next[apiWordId] = snapshot;
+          }
+          return next;
+        });
       }
     },
-    [user, dbSavedApiWordIds, setLocalSavedApiWordIds]
+    [user, dbSavedApiWordIds, localSavedApiWordIds, setLocalSavedApiWordIds, setLocalApiSnapshots]
   );
 
   const isApiWordSaved = useCallback(
@@ -192,6 +253,7 @@ export function useSavedWords() {
     toggleSaveWord,
     isWordSaved,
     savedApiWordIds,
+    savedApiSnapshots,
     toggleSaveApiWord,
     isApiWordSaved,
     loading,

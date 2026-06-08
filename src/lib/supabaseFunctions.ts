@@ -1,10 +1,17 @@
-/** Headers required for Supabase Edge Functions from the browser */
-export function supabaseFunctionHeaders(): Record<string, string> {
+/** Auth headers for Supabase Edge Functions from the browser */
+export function supabaseFunctionAuthHeaders(): Record<string, string> {
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
   return {
-    "Content-Type": "application/json",
     Authorization: `Bearer ${key}`,
     apikey: key,
+  };
+}
+
+/** JSON requests to Edge Functions */
+export function supabaseFunctionHeaders(): Record<string, string> {
+  return {
+    ...supabaseFunctionAuthHeaders(),
+    "Content-Type": "application/json",
   };
 }
 

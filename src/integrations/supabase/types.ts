@@ -395,21 +395,33 @@ export type Database = {
       user_saved_words: {
         Row: {
           created_at: string
+          english_gloss: string | null
           id: string
+          igbo_api_word_id: string
+          igbo_word: string | null
+          pronunciation: string | null
           user_id: string
-          word_id: string
+          word_class: string | null
         }
         Insert: {
           created_at?: string
+          english_gloss?: string | null
           id?: string
+          igbo_api_word_id: string
+          igbo_word?: string | null
+          pronunciation?: string | null
           user_id: string
-          word_id: string
+          word_class?: string | null
         }
         Update: {
           created_at?: string
+          english_gloss?: string | null
           id?: string
+          igbo_api_word_id?: string
+          igbo_word?: string | null
+          pronunciation?: string | null
           user_id?: string
-          word_id?: string
+          word_class?: string | null
         }
         Relationships: [
           {

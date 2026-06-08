@@ -87,7 +87,7 @@ export default function UseThisWordPractice() {
 
         <h1 className="text-2xl font-bold mb-1">Use This Word</h1>
         <p className="text-sm text-muted-foreground mb-4 capitalize">
-          Daily speaking drill from {sourceLabel} — produce Igbo, not just recognize it
+          Daily speaking drill from {sourceLabel} — tap the mic and answer in Igbo out loud
         </p>
 
         {focusWord && !isComplete && (
@@ -129,6 +129,7 @@ export default function UseThisWordPractice() {
                 targetWord={focusWord.igbo_word}
                 englishPrompt={currentDrill.englishPrompt}
                 referenceIgbo={currentDrill.referenceIgbo}
+                recordedUrl={focusWord.audio_url}
                 onAnswer={(scorePercent) => recordAnswer(currentDrill.id, scorePercent)}
               />
             )}

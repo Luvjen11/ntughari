@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getWordById, type IgboApiWord } from "@/lib/igboApi";
+import {
+  getWordById,
+  snapshotToDisplayWord,
+  type IgboApiWord,
+} from "@/lib/igboApi";
 import { useSavedWords } from "@/hooks/useSavedWords";
 import { VOCAB_PRACTICE_COLUMNS, VOCAB_PRACTICE_COLUMNS_BASIC } from "@/lib/supabaseFunctions";
 
@@ -55,7 +59,7 @@ interface UsePracticeVocabularyOptions {
 export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}) {
   const { includeExamples = false } = options;
   const { source, categoryId } = usePracticeSourceParams();
-  const { savedWords, savedApiWordIds } = useSavedWords();
+  const { savedWords, savedApiWordIds, savedApiSnapshots } = useSavedWords();
 
   const selectFields = includeExamples ? VOCAB_PRACTICE_COLUMNS : VOCAB_PRACTICE_COLUMNS_BASIC;
 
@@ -117,16 +121,24 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
 
   const vocabulary = useMemo(() => {
     if (source === "my-words") {
-      const fromApi = (apiWords ?? []).map((w) => ({
-        id: `api-${w.id}`,
-        english_translation: firstDef(w) || w.word,
-        igbo_word: w.word,
-      }));
+      const freshById = new Map((apiWords ?? []).map((w) => [w.id, w]));
+      const fromApi = savedApiWordIds.map((id) => {
+        const w = freshById.get(id) ?? (savedApiSnapshots[id]
+          ? snapshotToDisplayWord(id, savedApiSnapshots[id])
+          : null);
+        if (!w?.word) return null;
+        return {
+          id: `api-${w.id}`,
+          english_translation: firstDef(w) || w.word,
+          igbo_word: w.word,
+          audio_url: w.pronunciation || null,
+        };
+      }).filter((row): row is PracticeVocabWord => row != null);
       return [...(savedVocabRows ?? []), ...fromApi];
     }
     if (source === "category") return categoryVocabulary ?? [];
     return allVocabulary ?? [];
-  }, [source, savedVocabRows, apiWords, categoryVocabulary, allVocabulary]);
+  }, [source, savedVocabRows, apiWords, savedApiWordIds, savedApiSnapshots, categoryVocabulary, allVocabulary]);
 
   const isLoading =
     source === "my-words"

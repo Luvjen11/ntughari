@@ -35,6 +35,8 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Text exceeds 2000 character limit" }, 400);
     }
 
+    const safeText = text.length > 500 ? text.slice(0, 500) : text;
+
     const yarngptApiKey = Deno.env.get("YARNGPT_API_KEY");
     if (!yarngptApiKey) {
       console.error("YARNGPT_API_KEY not set in Supabase secrets");
@@ -44,7 +46,7 @@ serve(async (req: Request) => {
     const allowedVoices = ["Chinenye", "Nonso", "Idera", "Adaora"];
     const selectedVoice = allowedVoices.includes(voice) ? voice : "Idera";
 
-    console.log(`Generating TTS for: "${text.slice(0, 80)}..." with voice: ${selectedVoice}`);
+    console.log(`Generating TTS for: "${safeText.slice(0, 80)}..." with voice: ${selectedVoice}`);
 
     const response = await fetch("https://yarngpt.ai/api/v1/tts", {
       method: "POST",
@@ -53,7 +55,7 @@ serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        text,
+        text: safeText,
         voice: selectedVoice,
         response_format: responseFormat,
       }),

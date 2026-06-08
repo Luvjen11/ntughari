@@ -11,14 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Heart, Languages, MessageSquare, PenLine, Puzzle } from "lucide-react";
+import { ArrowLeft, Bot, Heart, Languages, MessageSquare, PenLine, Puzzle } from "lucide-react";
 import { buildPracticeUrl, type PracticeSource } from "@/hooks/usePracticeVocabulary";
 
 const practiceTypes = [
   {
     id: "use-this-word",
     title: "Use This Word",
-    description: "Daily speaking drill — write Igbo sentences using words you've learned",
+    description: "Daily speaking drill — say Igbo sentences using words you've learned",
     icon: MessageSquare,
     path: "/practice/use-this-word",
     usesVocabulary: true,
@@ -45,6 +45,14 @@ const practiceTypes = [
     description: "Arrange words in the correct order to form Igbo phrases",
     icon: Puzzle,
     path: "/practice/phrase-rebuild",
+    usesVocabulary: false,
+  },
+  {
+    id: "conversation",
+    title: "Conversation Tutor",
+    description: "Chat with an Igbo tutor — type or speak, hear replies in Igbo",
+    icon: Bot,
+    path: "/practice/conversation",
     usesVocabulary: false,
   },
 ];
