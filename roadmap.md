@@ -1,4 +1,5 @@
 # Roadmap
 
-- [ ] Apply migration 20261106120000_culture_items.sql (films & music) — blocked: the file isn't in the project yet; the culture merge needs to be pushed to main
-- [x] Deploy ai-tutor edge function
+- [x] Apply films & music change (culture_items)
+- [x] Apply private recordings storage
+- [x] Deploy ai-tutor and tts edge functions
