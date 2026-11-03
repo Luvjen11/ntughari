@@ -173,8 +173,10 @@ serve(async (req: Request) => {
 
     const safeText = (text.length > 500 ? text.slice(0, 500) : text).trim().normalize("NFC");
 
-    const allowedVoices = ["Chinenye", "Nonso", "Idera", "Adaora"];
-    const yarnVoice = allowedVoices.includes(voice) ? voice : "Idera";
+    // YarnGPT voice names are lowercase (e.g. "idera"); older clients may still send "Idera".
+    const allowedVoices = ["chinenye", "nonso", "idera", "adaora"];
+    const requestedVoice = String(voice ?? "").toLowerCase();
+    const yarnVoice = allowedVoices.includes(requestedVoice) ? requestedVoice : "idera";
 
     const elevenVoice = secret("ELEVENLABS_VOICE_ID");
     const elevenModel = secret("ELEVENLABS_TTS_MODEL") || "eleven_v3";
