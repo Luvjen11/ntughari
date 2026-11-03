@@ -196,6 +196,14 @@ function padForYarnGPT(text: string): string {
   return padded;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** How long YarnGPT asks us to back off after a 429 (Retry-After, in seconds), capped. */
+function retryAfterMs(res: Response, fallbackMs: number): number {
+  const seconds = Number(res.headers.get("retry-after"));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 20000) : fallbackMs;
+}
+
 async function generateYarnGPT(
   rawText: string,
   voice: string,
@@ -209,31 +217,43 @@ async function generateYarnGPT(
   // Replaying the same Idempotency-Key returns the original job instead of billing twice.
   const idempotencyKey = await cacheKey(["idempotency", "yarngpt", voice, outputFormat, text]);
 
-  const queued = await fetch("https://yarngpt.ai/api/v1/tts", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": idempotencyKey,
-    },
-    // YarnGPT rejects unknown fields (response_format included) with a 422.
-    body: JSON.stringify({ text, voice, output_format: outputFormat }),
-  });
+  // On a 429 wait and resend; the Idempotency-Key makes a resend safe.
+  let queued: Response;
+  for (let attempt = 1; ; attempt++) {
+    queued = await fetch("https://yarngpt.ai/api/v1/tts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      // YarnGPT rejects unknown fields (response_format included) with a 422.
+      body: JSON.stringify({ text, voice, output_format: outputFormat }),
+    });
+    if (queued.status !== 429 || attempt === 3) break;
+    await sleep(retryAfterMs(queued, 2000 * attempt));
+  }
   if (!queued.ok) return { ok: false, status: queued.status, details: await queued.text() };
 
   const job = (await queued.json()) as { job_id?: string };
   if (!job.job_id) return { ok: false, status: 502, details: "YarnGPT returned no job_id" };
 
   // There is no webhook: poll until the clip is ready. Short lines finish in seconds.
-  const deadline = Date.now() + 30000;
-  let wait = 400;
+  // The job is already paid for, so a 429 while polling means wait longer, not give up.
+  const deadline = Date.now() + 45000;
+  let wait = 800;
   while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    wait = Math.min(Math.round(wait * 1.6), 2000);
+    await sleep(wait);
+    wait = Math.min(Math.round(wait * 1.6), 3000);
 
     const statusRes = await fetch(`https://yarngpt.ai/api/v1/status/${job.job_id}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
+    if (statusRes.status === 429) {
+      await statusRes.body?.cancel();
+      wait = Math.max(wait, retryAfterMs(statusRes, 4000));
+      continue;
+    }
     if (!statusRes.ok) return { ok: false, status: statusRes.status, details: await statusRes.text() };
 
     const status = (await statusRes.json()) as {
@@ -378,6 +398,8 @@ serve(async (req: Request) => {
     return jsonResponse(
       {
         error: "TTS generation failed",
+        // Every provider said "too many requests": the admin tool waits and retries.
+        rateLimited: attempts.length > 0 && attempts.every((a) => a.status === 429),
         attempts,
         configured: {
           ttsProvider: secret("TTS_PROVIDER") || null,

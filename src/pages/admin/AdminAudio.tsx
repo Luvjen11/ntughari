@@ -13,6 +13,10 @@ import { findDictionaryRecording } from "@/lib/dictionaryRecordings";
 
 const CONCURRENCY = 2;
 const CHECK_CONCURRENCY = 4;
+/** Clips are made one at a time with a short gap, to stay under YarnGPT's rate limit. */
+const GENERATE_GAP_MS = 1000;
+/** After "too many requests", wait this long before each retry of the same clip, then give up on it. */
+const RATE_LIMIT_WAITS_MS = [30_000, 60_000, 120_000];
 
 type SourceId = "proverbs" | "letters" | "phrases" | "vocabWords" | "vocabExamples" | "letterExamples" | "stories";
 
@@ -116,11 +120,24 @@ async function isStored(text: string): Promise<boolean | null> {
   }
 }
 
-async function generateOne(text: string): Promise<{ cache: string | null; provider: string | null; error?: string }> {
+interface GenerateResult {
+  cache: string | null;
+  provider: string | null;
+  error?: string;
+  rateLimited?: boolean;
+}
+
+async function generateOne(text: string): Promise<GenerateResult> {
   const res = await ttsRequest({ text });
   if (!res.ok) {
     const body = await res.text();
-    return { cache: null, provider: null, error: `${res.status}: ${body.slice(0, 160)}` };
+    let rateLimited = res.status === 429;
+    try {
+      rateLimited ||= (JSON.parse(body) as { rateLimited?: boolean }).rateLimited === true;
+    } catch {
+      // not JSON
+    }
+    return { cache: null, provider: null, error: `${res.status}: ${body.slice(0, 160)}`, rateLimited };
   }
   await res.arrayBuffer();
   return { cache: res.headers.get("X-TTS-Cache"), provider: res.headers.get("X-TTS-Provider") };
@@ -129,6 +146,14 @@ async function generateOne(text: string): Promise<{ cache: string | null; provid
 /** Rough credit cost: YarnGPT bills per character, at least 20 per clip. */
 function estimateCredits(texts: string[]): number {
   return texts.reduce((sum, t) => sum + Math.max(chargeableLength(t), MIN_YARNGPT_CHARGEABLE), 0);
+}
+
+/** Waits in short steps so Stop still works during a long pause. */
+async function pause(ms: number, stopRef: { current: boolean }) {
+  const end = Date.now() + ms;
+  while (!stopRef.current && Date.now() < end) {
+    await new Promise((resolve) => setTimeout(resolve, Math.min(500, end - Date.now())));
+  }
 }
 
 /** Run `task` over `items` with a few at a time, stopping early when asked. */
@@ -179,6 +204,8 @@ export default function AdminAudio() {
   const [missing, setMissing] = useState<string[] | null>(null);
   const [checked, setChecked] = useState({ done: 0, stored: 0, unknown: 0 });
   const [tally, setTally] = useState<Tally>(EMPTY_TALLY);
+  /** Seconds the run is waiting after a rate limit, or null. */
+  const [rateWait, setRateWait] = useState<number | null>(null);
 
   const queue = useMemo(() => {
     if (!sources) return [];
@@ -245,13 +272,25 @@ export default function AdminAudio() {
     stopRef.current = false;
     setBusy("generate");
     setTally(EMPTY_TALLY);
-    await runPool(items, CONCURRENCY, stopRef, async (text) => {
-      let result: Awaited<ReturnType<typeof generateOne>>;
-      try {
-        result = await generateOne(text);
-      } catch (e) {
-        result = { cache: null, provider: null, error: (e as Error).message };
+    const notMade: string[] = [];
+    let processed = 0;
+    for (const text of items) {
+      if (stopRef.current) break;
+      let result: GenerateResult;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          result = await generateOne(text);
+        } catch (e) {
+          result = { cache: null, provider: null, error: (e as Error).message };
+        }
+        if (!result.rateLimited || attempt >= RATE_LIMIT_WAITS_MS.length || stopRef.current) break;
+        setRateWait(RATE_LIMIT_WAITS_MS[attempt] / 1000);
+        await pause(RATE_LIMIT_WAITS_MS[attempt], stopRef);
+        setRateWait(null);
+        if (stopRef.current) break;
       }
+      processed++;
+      if (result.error) notMade.push(text);
       setTally((t) => {
         const generated = { ...t.generated };
         if (result.cache === "miss" && result.provider) {
@@ -265,9 +304,15 @@ export default function AdminAudio() {
           lastError: result.error ? `"${text.slice(0, 40)}" → ${result.error}` : t.lastError,
         };
       });
-    });
+      if (result.cache === "miss") await pause(GENERATE_GAP_MS, stopRef);
+    }
+    setRateWait(null);
     setBusy(null);
-    setMissing(null);
+    // What failed or wasn't reached stays queued, so the next run picks up only those.
+    const left = new Set([...notMade, ...items.slice(processed)]);
+    const stillMissing = queue.filter((t) => left.has(t));
+    setMissing(stillMissing.length ? stillMissing : null);
+    setChecked({ done: queue.length, stored: queue.length - stillMissing.length, unknown: 0 });
   };
 
   const generatedCount = Object.values(tally.generated).reduce((a, b) => a + b, 0);
@@ -387,6 +432,11 @@ export default function AdminAudio() {
           <div><dt className="text-foreground/70">Failed</dt><dd className="font-display font-bold text-lg">{tally.failed}</dd></div>
         </dl>
 
+        {rateWait !== null && (
+          <p className="text-sm font-semibold">
+            YarnGPT asked us to slow down. Waiting {rateWait} seconds, then trying the same clip again…
+          </p>
+        )}
         {tally.lastError && <p className="text-xs break-words">Last error: {tally.lastError}</p>}
 
         {busy === "generate" ? (
