@@ -260,12 +260,14 @@ async function generateYarnGPT(
   if (!job.job_id) return { ok: false, status: 502, details: "YarnGPT returned no job_id" };
 
   // There is no webhook: poll until the clip is ready. Short lines finish in seconds.
-  // The job is already paid for, so a 429 while polling means wait longer, not give up.
+  // Polls may count toward the daily request limit, so check rarely: first after 2s,
+  // then backing off toward 5s (what YarnGPT advises for its speech-to-text jobs).
+  // The job is already paid for, so a short 429 while polling means wait longer, not give up.
   const deadline = Date.now() + 45000;
-  let wait = 800;
+  let wait = 2000;
   while (Date.now() < deadline) {
     await sleep(wait);
-    wait = Math.min(Math.round(wait * 1.6), 3000);
+    wait = Math.min(Math.round(wait * 1.5), 5000);
 
     const statusRes = await fetch(`https://yarngpt.ai/api/v1/status/${job.job_id}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
