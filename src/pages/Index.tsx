@@ -78,7 +78,7 @@ const modules = [
     to: "/culture",
     icon: Clapperboard,
     title: "Culture · Omenala",
-    description: "Igbo films and music, from highlife greats to new Nollywood, and where to find them",
+    description: "Films and music, proverbs, stories and the dialect map",
     color: "secondary" as const,
   },
 ];

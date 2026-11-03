@@ -24,6 +24,11 @@ export function parseTags(text: string): string[] {
   return [...new Set(tags)];
 }
 
+/** One song title per line → up to 5 titles, trimmed, no blanks or repeats. */
+export function parseSongs(text: string): string[] {
+  return [...new Set(text.split("\n").map((t) => t.trim()).filter(Boolean))].slice(0, 5);
+}
+
 /** "tv-series" → "tv series" for display. */
 export function tagLabel(tag: string): string {
   return tag.replace(/-/g, " ");
@@ -38,6 +43,11 @@ export function safeUrl(url: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+/** A YouTube search for one song, so we link to listings without picking a video ourselves. */
+export function youtubeSearchUrl(artist: string, song: string): string {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${artist} ${song}`)}`;
 }
 
 /** Host name for a link label, e.g. "en.wikipedia.org" → "wikipedia.org". */

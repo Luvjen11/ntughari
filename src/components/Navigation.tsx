@@ -1,23 +1,19 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Shield, Brain } from "lucide-react";
+import { Menu, X, Shield } from "lucide-react";
 import { useState } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { UserMenu } from "@/components/UserMenu";
 
+// Three doors: Speak (the main reason to be here), Basics for beginners, Culture to
+// explore. Progress, profile and settings live in the user menu.
 const navLinks = [
-  { to: "/alphabet", label: "Alphabet" },
-  { to: "/vocabulary", label: "Vocabulary" },
-  { to: "/practice", label: "Practice", icon: Brain, matchPrefix: true },
-  { to: "/skeletons", label: "Skeletons" },
-  { to: "/phrases", label: "Phrases" },
-  { to: "/proverbs", label: "Proverbs" },
-  { to: "/dialects", label: "Map" },
-  { to: "/culture", label: "Culture" },
+  { to: "/practice", label: "Speak", sections: ["/practice", "/my-words"] },
+  { to: "/basics", label: "Basics", sections: ["/basics", "/alphabet", "/vocabulary", "/phrases", "/skeletons"] },
+  { to: "/culture", label: "Culture", sections: ["/culture", "/proverbs", "/stories", "/story", "/dialects"] },
 ];
 
-function isNavActive(pathname: string, to: string, matchPrefix?: boolean) {
-  if (matchPrefix) return pathname === to || pathname.startsWith(`${to}/`);
-  return pathname === to;
+function isNavActive(pathname: string, sections: string[]) {
+  return sections.some((s) => pathname === s || pathname.startsWith(`${s}/`));
 }
 
 export function Navigation() {
@@ -38,13 +34,13 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1 xl:gap-2">
+          <div className="hidden md:flex items-center gap-2">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-3 xl:px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all
-                  ${isNavActive(location.pathname, link.to, link.matchPrefix)
+                className={`px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all
+                  ${isNavActive(location.pathname, link.sections)
                     ? "bg-primary text-primary-foreground border-foreground shadow-brutal-sm" 
                     : "bg-transparent border-transparent hover:bg-muted hover:border-foreground"
                   }`}
@@ -57,7 +53,7 @@ export function Navigation() {
             {isAdmin && (
               <Link
                 to="/admin"
-                className={`px-3 xl:px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all flex items-center gap-1
+                className={`px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all flex items-center gap-1
                   ${location.pathname.startsWith("/admin")
                     ? "bg-primary text-primary-foreground border-foreground shadow-brutal-sm" 
                     : "bg-transparent border-transparent hover:bg-muted hover:border-foreground"
@@ -73,9 +69,9 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Menu button below lg: the full link row needs about 1000px */}
+          {/* Mobile Menu Button */}
           <button
-            className="lg:hidden p-2 border-2 border-foreground rounded-lg bg-card shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            className="md:hidden p-2 border-2 border-foreground rounded-lg bg-card shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -84,7 +80,7 @@ export function Navigation() {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="lg:hidden pb-4 animate-slide-up">
+          <div className="md:hidden pb-4 animate-slide-up">
             <div className="flex flex-col gap-2">
               {navLinks.map((link) => (
                 <Link
@@ -92,7 +88,7 @@ export function Navigation() {
                   to={link.to}
                   onClick={() => setIsOpen(false)}
                   className={`px-4 py-3 font-display font-semibold rounded-lg border-2 transition-all
-                    ${isNavActive(location.pathname, link.to, link.matchPrefix)
+                    ${isNavActive(location.pathname, link.sections)
                       ? "bg-primary text-primary-foreground border-foreground shadow-brutal-sm" 
                       : "bg-card border-foreground hover:bg-muted"
                     }`}

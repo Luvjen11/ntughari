@@ -44,6 +44,8 @@ import AdminAudio from "./pages/admin/AdminAudio";
 import AdminCulture from "./pages/admin/AdminCulture";
 import Proverbs from "./pages/Proverbs";
 import Culture from "./pages/Culture";
+import CultureHub from "./pages/CultureHub";
+import Basics from "./pages/Basics";
 import FinishProverbPractice from "./pages/practice/FinishProverbPractice";
 import NotFound from "./pages/NotFound";
 
@@ -74,7 +76,9 @@ const App = () => (
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
             <Route path="/proverbs" element={<Proverbs />} />
-            <Route path="/culture" element={<Culture />} />
+            <Route path="/basics" element={<Basics />} />
+            <Route path="/culture" element={<CultureHub />} />
+            <Route path="/culture/films-music" element={<Culture />} />
             <Route
               path="/dialects"
               element={
