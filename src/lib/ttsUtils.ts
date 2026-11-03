@@ -5,6 +5,14 @@ export function looksLikeIgbo(text: string): boolean {
   return IGBO_MARKERS.test(text.normalize("NFC"));
 }
 
+/** YarnGPT bills by chargeable characters and refuses anything under 20 (422 INPUT_TOO_SHORT). */
+export const MIN_YARNGPT_CHARGEABLE = 20;
+
+/** Letters and digits only — the voice service ignores spaces and punctuation when it counts. */
+export function chargeableLength(text: string): number {
+  return text.replace(/[^\p{L}\p{N}]/gu, "").length;
+}
+
 const MAX_TTS_CHUNK = 450;
 
 /** Split long narration into YarnGPT-safe chunks (API limit 2000; shorter chunks fail less often). */

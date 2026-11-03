@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import { getWords } from "@/lib/igboApi";
 import { DEFAULT_YARNGPT_VOICE, type YarnGPTVoice } from "@/lib/ttsConstants";
 import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
-import { looksLikeIgbo, splitForTTS } from "@/lib/ttsUtils";
+import { chargeableLength, looksLikeIgbo, MIN_YARNGPT_CHARGEABLE, splitForTTS } from "@/lib/ttsUtils";
 
 interface TTSOptions {
   rate?: number;
@@ -20,10 +20,6 @@ export interface IgboAudioOptions {
   voice?: YarnGPTVoice;
 }
 
-/** YarnGPT bills by chargeable characters and refuses anything under 20 (422 INPUT_TOO_SHORT).
- *  Shorter lines go to the dictionary recordings or the browser voice instead. */
-const MIN_YARNGPT_CHARGEABLE = 20;
-const chargeableLength = (text: string) => text.replace(/[^\p{L}\p{N}]/gu, "").length;
 
 export function useTTS() {
   const [isSpeaking, setIsSpeaking] = useState(false);
