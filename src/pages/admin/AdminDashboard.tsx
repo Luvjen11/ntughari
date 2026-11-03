@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   ];
 
   const toolCards = [
-    { title: "Generate audio", description: "Pre-make and store audio for proverbs, phrases and stories", icon: AudioLines, to: "/admin/audio" },
+    { title: "Audio", description: "Save dictionary recordings, check what's stored, and pre-make AI audio", icon: AudioLines, to: "/admin/audio" },
   ];
 
   return (

@@ -266,7 +266,8 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
-    const { text, voice = "idera", responseFormat = "mp3", regenerate = false } = await req.json();
+    const { text, voice = "idera", responseFormat = "mp3", regenerate = false, check = false } =
+      await req.json();
 
     // Admin "Regenerate": skip stored clips and overwrite them with a fresh one.
     if (regenerate === true && !(await isAdmin(req))) {
@@ -299,6 +300,16 @@ serve(async (req: Request) => {
     };
 
     const order = generationOrder();
+
+    // "Is this clip stored?" for the admin audio tool: answers without generating
+    // anything, so checking never spends credits.
+    if (check === true) {
+      const candidates: TtsProvider[] = elevenVoice && !order.includes("elevenlabs") ? ["elevenlabs", ...order] : order;
+      for (const provider of candidates) {
+        if (await readCache(await keys[provider])) return jsonResponse({ stored: true, provider }, 200);
+      }
+      return jsonResponse({ stored: false }, 200);
+    }
 
     // After switching back to YarnGPT (e.g. credits used up), audio already made
     // with ElevenLabs keeps being served.

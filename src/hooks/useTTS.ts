@@ -3,6 +3,13 @@ import { getWords } from "@/lib/igboApi";
 import { DEFAULT_YARNGPT_VOICE, type YarnGPTVoice } from "@/lib/ttsConstants";
 import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
 import { looksLikeIgbo, splitForTTS } from "@/lib/ttsUtils";
+import {
+  forgetDeviceClips,
+  readDeviceClip,
+  readDictionaryLookup,
+  saveDeviceClip,
+  saveDictionaryLookup,
+} from "@/lib/audioDeviceCache";
 
 interface TTSOptions {
   rate?: number;
@@ -21,8 +28,9 @@ export interface IgboAudioOptions {
 }
 
 // ---- Shared across every component for the whole visit ----------------------
-// Generated clips cost credits, so each one is fetched once per visit and replayed
-// from memory. (The tts function also stores clips, so a new visit is free too.)
+// Generated clips cost credits, so each one is fetched once and replayed from memory
+// this visit and from the device's cache on later visits. (The tts function also
+// stores every clip, so even a new device never pays for the same text twice.)
 
 const MAX_CACHED_CLIPS = 200;
 const clipUrls = new Map<string, string>();
@@ -47,6 +55,7 @@ export function forgetClip(text: string) {
       URL.revokeObjectURL(url);
     }
   }
+  void forgetDeviceClips(`\u0000${trimmed}`);
 }
 
 /** Generated Igbo speech for `text` as an object URL, or null if no provider could make it. */
@@ -66,6 +75,13 @@ async function fetchClipUrl(text: string, voice: YarnGPTVoice): Promise<string |
   if (pending) return pending;
 
   const request = (async () => {
+    const onDevice = await readDeviceClip(key);
+    if (onDevice) {
+      const url = URL.createObjectURL(onDevice);
+      rememberClip(key, url);
+      return url;
+    }
+
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (!supabaseUrl) return null;
     try {
@@ -84,7 +100,9 @@ async function fetchClipUrl(text: string, voice: YarnGPTVoice): Promise<string |
         console.warn("TTS returned a non-audio response");
         return null;
       }
-      const url = URL.createObjectURL(await response.blob());
+      const blob = await response.blob();
+      void saveDeviceClip(key, blob);
+      const url = URL.createObjectURL(blob);
       rememberClip(key, url);
       return url;
     } catch (err) {
@@ -97,7 +115,7 @@ async function fetchClipUrl(text: string, voice: YarnGPTVoice): Promise<string |
   return request;
 }
 
-/** A human recording of a word from the Igbo API dictionary, remembered per visit. */
+/** A human recording of a word from the Igbo API dictionary, remembered on this device. */
 async function fetchIgboApiUrl(text: string): Promise<string | null> {
   const trimmed = text.trim().normalize("NFC");
   if (!trimmed) return null;
@@ -105,6 +123,11 @@ async function fetchIgboApiUrl(text: string): Promise<string | null> {
   // and rejects whole sentences (400), so don't ask it for those.
   if (trimmed.split(/\s+/).length > 3) return null;
   if (igboApiLookups.has(trimmed)) return igboApiLookups.get(trimmed) ?? null;
+  const remembered = readDictionaryLookup(trimmed);
+  if (remembered !== undefined) {
+    igboApiLookups.set(trimmed, remembered);
+    return remembered;
+  }
 
   const { words, error } = await getWords({ keyword: trimmed, strict: trimmed.length <= 12 });
   let url: string | null = null;
@@ -113,6 +136,8 @@ async function fetchIgboApiUrl(text: string): Promise<string | null> {
     url = exact?.pronunciation ?? words.find((w) => w.pronunciation)?.pronunciation ?? null;
   }
   igboApiLookups.set(trimmed, url);
+  // A failed request is not an answer; only remember real lookups.
+  if (!error) saveDictionaryLookup(trimmed, url);
   return url;
 }
 

@@ -20,6 +20,7 @@ interface LetterExample {
   letter_id: string;
   igbo_word: string;
   english_translation: string;
+  audio_url?: string | null;
 }
 
 export default function Alphabet() {
@@ -220,7 +221,7 @@ export default function Alphabet() {
                         </p>
                       </div>
                       <button
-                        onClick={() => speakIgboWord(example.igbo_word)}
+                        onClick={() => speakIgboWord(example.igbo_word, { recordedUrl: example.audio_url })}
                         aria-label={`Hear ${example.igbo_word}`}
                         className="p-2 rounded-lg border-2 border-foreground bg-card hover:bg-primary transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                       >
