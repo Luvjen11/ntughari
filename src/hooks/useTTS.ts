@@ -11,6 +11,8 @@ interface TTSOptions {
 interface SpeakSentenceOptions {
   voice?: YarnGPTVoice;
   rate?: number;
+  /** Skip the diacritics check: the caller knows the text is Igbo (e.g. "Onye kwe, chi ya ekwe"). */
+  igbo?: boolean;
 }
 
 export interface IgboAudioOptions {
@@ -269,7 +271,7 @@ export function useTTS() {
       const trimmed = text?.trim();
       if (!trimmed) return;
 
-      if (!looksLikeIgbo(trimmed)) {
+      if (!options?.igbo && !looksLikeIgbo(trimmed)) {
         speak(trimmed, { rate: options?.rate });
         return;
       }

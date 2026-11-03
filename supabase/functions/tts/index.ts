@@ -5,6 +5,7 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Expose-Headers": "X-TTS-Cache, X-TTS-Provider",
 };
 
 function jsonResponse(body: unknown, status: number) {
@@ -14,7 +15,7 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-function audioResponse(audio: ArrayBuffer, cache: "hit" | "miss") {
+function audioResponse(audio: ArrayBuffer, cache: "hit" | "miss", provider: TtsProvider) {
   return new Response(audio, {
     headers: {
       ...corsHeaders,
@@ -22,19 +23,24 @@ function audioResponse(audio: ArrayBuffer, cache: "hit" | "miss") {
       "Content-Disposition": 'inline; filename="igbo-audio.mp3"',
       "Cache-Control": "public, max-age=86400",
       "X-TTS-Cache": cache,
+      "X-TTS-Provider": provider,
     },
   });
 }
 
 type TtsProvider = "yarngpt" | "elevenlabs";
 
-/** TTS_PROVIDER=elevenlabs switches every voice to ELEVENLABS_VOICE_ID; default YarnGPT. */
-function resolveProvider(): TtsProvider {
-  const forced = Deno.env.get("TTS_PROVIDER")?.toLowerCase().trim();
-  if (forced === "elevenlabs" && Deno.env.get("ELEVENLABS_API_KEY") && Deno.env.get("ELEVENLABS_VOICE_ID")) {
-    return "elevenlabs";
-  }
-  return "yarngpt";
+function elevenLabsConfigured(): boolean {
+  return !!(Deno.env.get("ELEVENLABS_API_KEY") && Deno.env.get("ELEVENLABS_VOICE_ID"));
+}
+
+/**
+ * Providers to generate with, in order. TTS_PROVIDER=elevenlabs puts ElevenLabs
+ * first; YarnGPT always follows so playback keeps working when credits run out.
+ */
+function generationOrder(): TtsProvider[] {
+  const wantsEleven = Deno.env.get("TTS_PROVIDER")?.toLowerCase().trim() === "elevenlabs";
+  return wantsEleven && elevenLabsConfigured() ? ["elevenlabs", "yarngpt"] : ["yarngpt"];
 }
 
 // ---- Storage cache: each (provider, voice, model, text) is generated once, then served from the
@@ -145,36 +151,48 @@ serve(async (req: Request) => {
     const allowedVoices = ["Chinenye", "Nonso", "Idera", "Adaora"];
     const yarnVoice = allowedVoices.includes(voice) ? voice : "Idera";
 
-    const provider = resolveProvider();
     const elevenVoice = Deno.env.get("ELEVENLABS_VOICE_ID") ?? "";
     const elevenModel = Deno.env.get("ELEVENLABS_TTS_MODEL")?.trim() || "eleven_v3";
+    const keys: Record<TtsProvider, Promise<string>> = {
+      elevenlabs: cacheKey(["elevenlabs", elevenVoice, elevenModel, safeText]),
+      yarngpt: cacheKey(["yarngpt", yarnVoice, responseFormat, safeText]),
+    };
 
-    const key = await cacheKey(
-      provider === "elevenlabs"
-        ? ["elevenlabs", elevenVoice, elevenModel, safeText]
-        : ["yarngpt", yarnVoice, responseFormat, safeText]
-    );
+    const order = generationOrder();
 
-    const cached = await readCache(key);
-    if (cached) return audioResponse(cached, "hit");
-
-    console.log(`Generating TTS (${provider}) for: "${safeText.slice(0, 80)}..."`);
-
-    const result =
-      provider === "elevenlabs"
-        ? await generateElevenLabs(safeText, elevenVoice, elevenModel)
-        : await generateYarnGPT(safeText, yarnVoice, responseFormat);
-
-    if (!result.ok) {
-      console.error(`${provider} TTS error:`, result.status, result.details);
-      return jsonResponse(
-        { error: "TTS generation failed", details: result.details, status: result.status },
-        result.status >= 400 && result.status < 600 ? result.status : 502
-      );
+    // After switching back to YarnGPT (e.g. credits used up), audio already made
+    // with ElevenLabs keeps being served.
+    if (!order.includes("elevenlabs") && elevenVoice) {
+      const cached = await readCache(await keys.elevenlabs);
+      if (cached) return audioResponse(cached, "hit", "elevenlabs");
     }
 
-    await writeCache(key, result.audio);
-    return audioResponse(result.audio, "miss");
+    // Each provider in turn: its cached clip, else generate. A YarnGPT clip cached
+    // earlier never blocks generating the preferred ElevenLabs one.
+    let lastError: { provider: TtsProvider; status: number; details: string } | null = null;
+    for (const provider of order) {
+      const cached = await readCache(await keys[provider]);
+      if (cached) return audioResponse(cached, "hit", provider);
+
+      console.log(`Generating TTS (${provider}) for: "${safeText.slice(0, 80)}..."`);
+      const result =
+        provider === "elevenlabs"
+          ? await generateElevenLabs(safeText, elevenVoice, elevenModel)
+          : await generateYarnGPT(safeText, yarnVoice, responseFormat);
+
+      if (result.ok) {
+        await writeCache(await keys[provider], result.audio);
+        return audioResponse(result.audio, "miss", provider);
+      }
+      console.error(`${provider} TTS error:`, result.status, result.details);
+      lastError = { provider, status: result.status, details: result.details };
+    }
+
+    const status = lastError?.status ?? 502;
+    return jsonResponse(
+      { error: "TTS generation failed", provider: lastError?.provider, details: lastError?.details, status },
+      status >= 400 && status < 600 ? status : 502
+    );
   } catch (error) {
     console.error("TTS error:", error);
     return jsonResponse(

@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { BookOpen, MessageSquare, Layers, Type, BookHeart, FolderOpen, Inbox } from "lucide-react";
+import { BookOpen, MessageSquare, Layers, Type, BookHeart, FolderOpen, Inbox, Quote, Map as MapIcon, AudioLines } from "lucide-react";
 
 export default function AdminDashboard() {
   const { data: counts, isLoading } = useQuery({
     queryKey: ["adminCounts"],
     queryFn: async () => {
-      const [letters, vocabulary, skeletons, phrases, stories, categories, feedbackNew] = await Promise.all([
+      const [letters, vocabulary, skeletons, phrases, stories, categories, feedbackNew, proverbs, dialectVariants] = await Promise.all([
         supabase.from("letters").select("id", { count: "exact", head: true }),
         supabase.from("vocabulary").select("id", { count: "exact", head: true }),
         supabase.from("sentence_skeletons").select("id", { count: "exact", head: true }),
@@ -15,6 +15,8 @@ export default function AdminDashboard() {
         supabase.from("stories").select("id", { count: "exact", head: true }),
         supabase.from("vocab_categories").select("id", { count: "exact", head: true }),
         supabase.from("user_feedback").select("id", { count: "exact", head: true }).eq("status", "new"),
+        supabase.from("proverbs").select("id", { count: "exact", head: true }),
+        supabase.from("dialect_variants").select("id", { count: "exact", head: true }),
       ]);
       
       return {
@@ -25,6 +27,8 @@ export default function AdminDashboard() {
         stories: stories.count ?? 0,
         categories: categories.count ?? 0,
         feedbackNew: feedbackNew.count ?? 0,
+        proverbs: proverbs.count ?? 0,
+        dialectVariants: dialectVariants.count ?? 0,
       };
     },
   });
@@ -36,7 +40,13 @@ export default function AdminDashboard() {
     { title: "Skeletons", count: counts?.skeletons ?? 0, icon: Layers, to: "/admin/skeletons", color: "bg-primary" },
     { title: "Phrases", count: counts?.phrases ?? 0, icon: MessageSquare, to: "/admin/phrases", color: "bg-secondary" },
     { title: "Stories", count: counts?.stories ?? 0, icon: BookHeart, to: "/admin/stories", color: "bg-primary" },
+    { title: "Proverbs", count: counts?.proverbs ?? 0, icon: Quote, to: "/admin/proverbs", color: "bg-secondary" },
+    { title: "Dialect variants", count: counts?.dialectVariants ?? 0, icon: MapIcon, to: "/admin/dialects", color: "bg-primary" },
     { title: "Feedback", count: counts?.feedbackNew ?? 0, icon: Inbox, to: "/admin/feedback", color: "bg-secondary" },
+  ];
+
+  const toolCards = [
+    { title: "Generate audio", description: "Pre-make and store audio for proverbs, phrases and stories", icon: AudioLines, to: "/admin/audio" },
   ];
 
   return (
@@ -69,6 +79,19 @@ export default function AdminDashboard() {
           ))}
         </div>
       )}
+
+      <h2 className="font-display text-2xl font-bold mt-10 mb-4">Tools</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {toolCards.map((card) => (
+          <Link key={card.title} to={card.to} className="brutal-card p-6 group">
+            <div className="bg-muted w-12 h-12 rounded-lg flex items-center justify-center mb-4 border-2 border-foreground">
+              <card.icon size={24} />
+            </div>
+            <h3 className="font-display font-semibold text-lg mb-1">{card.title}</h3>
+            <p className="text-sm text-muted-foreground">{card.description}</p>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

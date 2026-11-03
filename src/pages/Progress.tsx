@@ -5,9 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSavedWords } from "@/hooks/useSavedWords";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen, Heart, Flame, MessageSquare } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, BookOpen, Heart, Flame, MessageSquare, Quote } from "lucide-react";
 
-type PracticeType = "translation" | "fill_gap" | "phrase_rebuild" | "use_this_word";
+type PracticeType =
+  | "translation"
+  | "fill_gap"
+  | "phrase_rebuild"
+  | "use_this_word"
+  | "finish_proverb";
 
 interface PracticeSession {
   id: string;
@@ -22,6 +27,7 @@ const practiceTypeLabels: Record<PracticeType, string> = {
   fill_gap: "Fill the Gap",
   phrase_rebuild: "Phrase Rebuild",
   use_this_word: "Use This Word",
+  finish_proverb: "Finish the Proverb",
 };
 
 const practiceTypeIcons: Record<PracticeType, React.ReactNode> = {
@@ -29,6 +35,7 @@ const practiceTypeIcons: Record<PracticeType, React.ReactNode> = {
   fill_gap: <Target className="h-5 w-5" />,
   phrase_rebuild: <TrendingUp className="h-5 w-5" />,
   use_this_word: <MessageSquare className="h-5 w-5" />,
+  finish_proverb: <Quote className="h-5 w-5" />,
 };
 
 function sessionScorePercent(score: number, totalQuestions: number): number {

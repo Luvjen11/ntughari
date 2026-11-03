@@ -12,9 +12,12 @@ import {
   Heart,
   Trophy,
   ArrowRight,
+  Quote,
+  Map as MapIcon,
 } from "lucide-react";
 import { ModuleCard } from "@/components/ModuleCard";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
+import { ProverbOfTheDay } from "@/components/proverbs/ProverbOfTheDay";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -56,7 +59,25 @@ const modules = [
     description: "Break down familiar phrases into learnable parts",
     color: "primary" as const,
   },
+  {
+    to: "/proverbs",
+    icon: Quote,
+    title: "Proverbs · Ilu",
+    description: "Learn what Igbo proverbs say, what they mean, and when people use them",
+    color: "secondary" as const,
+  },
+  {
+    to: "/dialects",
+    icon: MapIcon,
+    title: "Dialect Map",
+    description: "See where Igbo is spoken and hear how words change from place to place",
+    color: "primary" as const,
+  },
 ];
+
+// Pair modules into two columns; an odd one out sits centred underneath.
+const pairedModules = modules.slice(0, modules.length - (modules.length % 2));
+const leftoverModule = modules.length % 2 ? modules[modules.length - 1] : null;
 
 const highlights = [
   {
@@ -159,9 +180,13 @@ export default function Index() {
           )}
         </div>
 
+        <div className="max-w-3xl mx-auto mb-16">
+          <ProverbOfTheDay />
+        </div>
+
         <div className="max-w-4xl mx-auto mb-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {modules.slice(0, 4).map((module, index) => (
+            {pairedModules.map((module, index) => (
               <div
                 key={module.to}
                 className="animate-bounce-in"
@@ -171,11 +196,16 @@ export default function Index() {
               </div>
             ))}
           </div>
-          <div className="mt-6 flex justify-center animate-bounce-in" style={{ animationDelay: "400ms" }}>
-            <div className="w-full md:w-[calc(50%-0.75rem)]">
-              <ModuleCard {...modules[4]} />
+          {leftoverModule && (
+            <div
+              className="mt-6 flex justify-center animate-bounce-in"
+              style={{ animationDelay: `${pairedModules.length * 100}ms` }}
+            >
+              <div className="w-full md:w-[calc(50%-0.75rem)]">
+                <ModuleCard {...leftoverModule} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="max-w-5xl mx-auto mb-16">
