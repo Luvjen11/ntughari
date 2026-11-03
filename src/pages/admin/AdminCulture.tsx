@@ -194,12 +194,12 @@ export default function AdminCulture() {
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="title">Title</Label>
-                  <Input id="title" value={formData.title} onChange={(e) => set("title", e.target.value)} required className="border-2 border-foreground" placeholder="Osondi Owendi" />
+                  <Input id="title" value={formData.title} onChange={(e) => set("title", e.target.value)} required className="border-2 border-foreground" placeholder="Film title, or the artist's name for music" />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="sm:col-span-2">
-                  <Label htmlFor="creator">Artist / director (optional)</Label>
+                  <Label htmlFor="creator">Director or maker (optional)</Label>
                   <Input id="creator" value={formData.creator} onChange={(e) => set("creator", e.target.value)} className="border-2 border-foreground" />
                 </div>
                 <div>
@@ -207,6 +207,9 @@ export default function AdminCulture() {
                   <Input id="year" type="number" min={1900} max={2100} value={formData.year} onChange={(e) => set("year", e.target.value)} className="border-2 border-foreground" />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Music entries are artists: put the artist or band as the title and name their best-known work in the description.
+              </p>
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" value={formData.description} onChange={(e) => set("description", e.target.value)} required className="border-2 border-foreground" rows={3} />

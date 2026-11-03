@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Film, MapPin, Music } from "lucide-react";
 import { useCultureItems, type CultureItemWithRegion } from "@/hooks/useCultureItems";
+import { MusicExplainer } from "@/components/culture/MusicExplainer";
 import {
   CULTURE_TYPES,
   TYPE_LABELS,
@@ -131,9 +132,9 @@ export default function Culture() {
         <header className="space-y-2">
           <h1 className="font-display text-3xl md:text-4xl font-bold">Omenala · Culture</h1>
           <p className="text-muted-foreground max-w-prose">
-            Hear Igbo the way people use it: highlife and rap, classic Nollywood and new films.
-            Each entry says who made it, whether it is in Igbo, and where to find it. We link to
-            official or well-known listings and never host the works ourselves.
+            Hear Igbo the way people use it: classic Nollywood and new films, highlife greats
+            and today's artists. Each entry says whether it is in Igbo and where to read more.
+            We link to official or well-known listings and never host the works ourselves.
           </p>
         </header>
 
@@ -163,6 +164,12 @@ export default function Culture() {
             );
           })}
         </div>
+
+        {type === "music" && <MusicExplainer />}
+
+        {type === "music" && (
+          <h2 className="font-display text-2xl font-bold -mb-4">Igbo artists</h2>
+        )}
 
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by language">
