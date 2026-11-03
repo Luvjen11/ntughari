@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { BookOpen, MessageSquare, Layers, Type, BookHeart, FolderOpen, Inbox, Quote, Map as MapIcon, AudioLines } from "lucide-react";
+import { BookOpen, MessageSquare, Layers, Type, BookHeart, FolderOpen, Inbox, Quote, Map as MapIcon, AudioLines, Clapperboard } from "lucide-react";
 
 export default function AdminDashboard() {
   const { data: counts, isLoading } = useQuery({
     queryKey: ["adminCounts"],
     queryFn: async () => {
-      const [letters, vocabulary, skeletons, phrases, stories, categories, feedbackNew, proverbs, dialectVariants] = await Promise.all([
+      const [letters, vocabulary, skeletons, phrases, stories, categories, feedbackNew, proverbs, dialectVariants, cultureItems] = await Promise.all([
         supabase.from("letters").select("id", { count: "exact", head: true }),
         supabase.from("vocabulary").select("id", { count: "exact", head: true }),
         supabase.from("sentence_skeletons").select("id", { count: "exact", head: true }),
@@ -17,6 +17,7 @@ export default function AdminDashboard() {
         supabase.from("user_feedback").select("id", { count: "exact", head: true }).eq("status", "new"),
         supabase.from("proverbs").select("id", { count: "exact", head: true }),
         supabase.from("dialect_variants").select("id", { count: "exact", head: true }),
+        supabase.from("culture_items").select("id", { count: "exact", head: true }),
       ]);
       
       return {
@@ -29,6 +30,7 @@ export default function AdminDashboard() {
         feedbackNew: feedbackNew.count ?? 0,
         proverbs: proverbs.count ?? 0,
         dialectVariants: dialectVariants.count ?? 0,
+        cultureItems: cultureItems.count ?? 0,
       };
     },
   });
@@ -42,6 +44,7 @@ export default function AdminDashboard() {
     { title: "Stories", count: counts?.stories ?? 0, icon: BookHeart, to: "/admin/stories", color: "bg-primary" },
     { title: "Proverbs", count: counts?.proverbs ?? 0, icon: Quote, to: "/admin/proverbs", color: "bg-secondary" },
     { title: "Dialect variants", count: counts?.dialectVariants ?? 0, icon: MapIcon, to: "/admin/dialects", color: "bg-primary" },
+    { title: "Films & music", count: counts?.cultureItems ?? 0, icon: Clapperboard, to: "/admin/culture", color: "bg-secondary" },
     { title: "Feedback", count: counts?.feedbackNew ?? 0, icon: Inbox, to: "/admin/feedback", color: "bg-secondary" },
   ];
 

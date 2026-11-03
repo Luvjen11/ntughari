@@ -12,6 +12,7 @@ const navLinks = [
   { to: "/phrases", label: "Phrases" },
   { to: "/proverbs", label: "Proverbs" },
   { to: "/dialects", label: "Map" },
+  { to: "/culture", label: "Culture" },
 ];
 
 function isNavActive(pathname: string, to: string, matchPrefix?: boolean) {
@@ -37,12 +38,12 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-1 xl:gap-2">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all
+                className={`px-3 xl:px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all
                   ${isNavActive(location.pathname, link.to, link.matchPrefix)
                     ? "bg-primary text-primary-foreground border-foreground shadow-brutal-sm" 
                     : "bg-transparent border-transparent hover:bg-muted hover:border-foreground"
@@ -56,7 +57,7 @@ export function Navigation() {
             {isAdmin && (
               <Link
                 to="/admin"
-                className={`px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all flex items-center gap-1
+                className={`px-3 xl:px-4 py-2 font-display font-semibold text-sm rounded-lg border-2 transition-all flex items-center gap-1
                   ${location.pathname.startsWith("/admin")
                     ? "bg-primary text-primary-foreground border-foreground shadow-brutal-sm" 
                     : "bg-transparent border-transparent hover:bg-muted hover:border-foreground"
@@ -72,9 +73,9 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Menu button below lg: the full link row needs about 1000px */}
           <button
-            className="md:hidden p-2 border-2 border-foreground rounded-lg bg-card shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            className="lg:hidden p-2 border-2 border-foreground rounded-lg bg-card shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -83,7 +84,7 @@ export function Navigation() {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden pb-4 animate-slide-up">
+          <div className="lg:hidden pb-4 animate-slide-up">
             <div className="flex flex-col gap-2">
               {navLinks.map((link) => (
                 <Link

@@ -41,7 +41,9 @@ import AdminFeedback from "./pages/admin/AdminFeedback";
 import AdminProverbs from "./pages/admin/AdminProverbs";
 import AdminDialects from "./pages/admin/AdminDialects";
 import AdminAudio from "./pages/admin/AdminAudio";
+import AdminCulture from "./pages/admin/AdminCulture";
 import Proverbs from "./pages/Proverbs";
+import Culture from "./pages/Culture";
 import FinishProverbPractice from "./pages/practice/FinishProverbPractice";
 import NotFound from "./pages/NotFound";
 
@@ -72,6 +74,7 @@ const App = () => (
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
             <Route path="/proverbs" element={<Proverbs />} />
+            <Route path="/culture" element={<Culture />} />
             <Route
               path="/dialects"
               element={
@@ -97,6 +100,7 @@ const App = () => (
             <Route path="/admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
             <Route path="/admin/proverbs" element={<AdminRoute><AdminProverbs /></AdminRoute>} />
             <Route path="/admin/dialects" element={<AdminRoute><AdminDialects /></AdminRoute>} />
+            <Route path="/admin/culture" element={<AdminRoute><AdminCulture /></AdminRoute>} />
             <Route path="/admin/audio" element={<AdminRoute><AdminAudio /></AdminRoute>} />
             <Route path="/admin/letters" element={<AdminRoute><AdminLetters /></AdminRoute>} />
             <Route path="/admin/vocabulary" element={<AdminRoute><AdminVocabulary /></AdminRoute>} />

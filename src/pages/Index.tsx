@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Quote,
   Map as MapIcon,
+  Clapperboard,
 } from "lucide-react";
 import { ModuleCard } from "@/components/ModuleCard";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
@@ -72,6 +73,13 @@ const modules = [
     title: "Dialect Map",
     description: "See where Igbo is spoken and hear how words change from place to place",
     color: "primary" as const,
+  },
+  {
+    to: "/culture",
+    icon: Clapperboard,
+    title: "Culture · Omenala",
+    description: "Igbo films and music, from highlife greats to new Nollywood, and where to find them",
+    color: "secondary" as const,
   },
 ];
 
