@@ -1,3 +1,4 @@
+// deploy-marker: 2026-11-03T16:12Z (force fresh deploy)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders: Record<string, string> = {
