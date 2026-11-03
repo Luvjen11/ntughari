@@ -118,9 +118,17 @@ async function generateYarnGPT(text: string, voice: string): Promise<GenerateRes
   const apiKey = secret("YARNGPT_API_KEY");
   if (!apiKey) return { ok: false, status: 500, details: "YARNGPT_API_KEY not set" };
 
+  // YarnGPT requires an Idempotency-Key header. Deriving it from voice + text means a
+  // retry of the same line reuses the same generation instead of costing a second one.
+  const idempotencyKey = await cacheKey(["idempotency", "yarngpt", voice, text]);
+
   const response = await fetch("https://yarngpt.ai/api/v1/tts", {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
     // YarnGPT now rejects unknown fields (response_format included) with a 422.
     body: JSON.stringify({ text, voice }),
   });
