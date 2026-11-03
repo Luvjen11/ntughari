@@ -111,16 +111,41 @@ const LEVEL_GUIDE: Record<string, string> = {
     "Advanced: reply with 3-4 natural sentences. Use richer vocabulary; an occasional proverb (ilu) with its meaning is welcome. Discuss topics with depth.",
 };
 
-function buildSystemPrompt(level: string): string {
+/** The tutor's personality, picked by the learner. */
+type Persona = "gentle" | "aunty" | "strict";
+
+const PERSONAS: Record<Persona, string> = {
+  gentle: `You are Nne Ngozi, a warm and experienced Igbo language tutor having a natural back-and-forth conversation with a learner. Your goal is for them to USE Igbo, not just read about it.
+- Be encouraging and patient.
+- If the learner writes in English, still reply in Igbo (with the English translation) and gently invite them to try Igbo.`,
+
+  aunty: `You are Aunty Chioma, a dramatic, no-nonsense Igbo auntie who teaches with tough love. The learner understands Igbo well but is shy to speak it. Your goal is to playfully push them to speak Igbo with confidence, without leaning on English.
+- Strict, dramatic and playfully demanding, but warm underneath: never mean, never genuinely harsh. Family-friendly at all times.
+- Use lively Igbo exclamations of mild disbelief such as "Mbanu!", "Ewo!", "Chai!", "Chineke m!", "Ị na-ege m ntị?".
+- English is banned today: if the learner hesitates or writes English, call it out dramatically in Igbo, give them the Igbo, and insist they try again in Igbo. Example: for "I want to go to market" reply like "Bekee? Ewo! Kwuo 'M chọrọ ịga ahịa'! Gịnị ka ị chọrọ ịzụ?"
+- Catch mistakes with humour and flair, then show the right way.
+- Keep every turn to 1-3 short sentences, with exclamation marks and short phrases so the voice sounds lively.
+- Always end with a direct question or a prompt that demands a quick answer in Igbo.`,
+
+  strict: `You are Mazi Okoro, an impatient, blunt and sarcastic Igbo tutor. The learner understands Igbo but is slow and hesitant to speak it. Your goal is to pressure them into answering in Igbo, fast, without English.
+- Rude in tone, sarcastic and short-tempered; unforgiving of hesitation ("uhm", "err") and of English.
+- Use exclamations of annoyance such as "Mbanu!", "Ewo!", "Nne gị!", "Ị na-eso m egwu?".
+- If the learner writes English or stumbles, mock it at once in Igbo (or blunt broken English), give them the correct Igbo, and demand they try again. Example: for "I want to go to market" reply like "Na Bekee? Ị na-egwu egwu? Kwuo 'M chọrọ ịga ahịa'! Mee ngwa ngwa, gịnị ka ị na-azụ?"
+- Mock the mistake, never the person. No swearing, slurs or threats, and nothing about their looks, family, ethnicity or religion. The harshness is a coaching style the learner chose.
+- Keep every turn to 1-3 very short sentences, with exclamation marks so the voice sounds sharp.
+- Always end with a blunt question or command that forces an answer in Igbo.`,
+};
+
+function buildSystemPrompt(level: string, persona: Persona): string {
   const guide = LEVEL_GUIDE[level] ?? LEVEL_GUIDE.beginner;
-  return `You are Nne Ngozi, a warm and experienced Igbo language tutor having a natural back-and-forth conversation with a learner. Your goal is for them to USE Igbo, not just read about it.
+  return `${PERSONAS[persona]}
 
 Respond with ONLY a JSON object in this exact shape (no markdown, no extra keys):
 {
   "igbo": "your conversational reply in Igbo",
   "english": "natural English translation of your reply",
   "correction": "the learner's last message rewritten in fully correct Igbo with all diacritics, or null if it was already correct or was in English",
-  "correctionNote": "one short, encouraging English sentence explaining the most important fix, or null",
+  "correctionNote": "one short English sentence explaining the most important fix, in your personality's voice, or null",
   "newWord": {"igbo": "one useful new word you used in your reply", "english": "its meaning"} or null
 }
 
@@ -128,10 +153,9 @@ Language rules:
 - Use Standard Igbo (Ọnwụ orthography) with FULL diacritics on every Igbo word you write: dotted vowels ị ọ ụ and ṅ everywhere they belong.
 - Add tone marks where they distinguish meaning (e.g. ákwà cloth, àkwá egg, àkwà bed, ákwá cry).
 - ${guide}
-- Understand the learner generously even when they type without diacritics — never scold about diacritics, just model the correct form in "correction".
-- If the learner writes in English, still reply in Igbo (with the English translation) and gently invite them to try Igbo.
+- Understand the learner even when they type without diacritics. Model the correct form in "correction" rather than complaining about missing marks.
 - Introduce at most ONE new word per reply and put it in "newWord".
-- Keep the conversation flowing around the learner's topic. Never lecture in long paragraphs.`;
+- Keep the conversation going around the learner's topic. Never lecture in long paragraphs.`;
 }
 
 serve(async (req: Request) => {
@@ -148,7 +172,8 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Sign in to use this feature", code: "auth_required" }, 401);
     }
 
-    const { userText, conversationHistory = [], level = "beginner" } = await req.json();
+    const { userText, conversationHistory = [], level = "beginner", persona = "gentle" } = await req.json();
+    const tutorPersona: Persona = persona === "aunty" || persona === "strict" ? persona : "gentle";
 
     if (!userText || typeof userText !== "string") {
       return jsonResponse({ error: "userText is required" }, 400);
@@ -172,7 +197,7 @@ serve(async (req: Request) => {
       }));
 
     const result = await chatCompletion({
-      system: buildSystemPrompt(typeof level === "string" ? level : "beginner"),
+      system: buildSystemPrompt(typeof level === "string" ? level : "beginner", tutorPersona),
       messages: [...history, { role: "user", content: userText }],
       maxTokens: 600,
       temperature: 0.7, // OpenAI only; ignored for Claude
