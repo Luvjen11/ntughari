@@ -14,68 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      culture_items: {
-        Row: {
-          created_at: string
-          creator: string | null
-          description: string
-          id: string
-          igbo_language: boolean
-          is_published: boolean
-          order_index: number
-          region_slug: string | null
-          reviewed: boolean
-          source: string | null
-          tags: string[]
-          title: string
-          type: string
-          where_to_watch_or_listen: string | null
-          year: number | null
-        }
-        Insert: {
-          created_at?: string
-          creator?: string | null
-          description: string
-          id?: string
-          igbo_language?: boolean
-          is_published?: boolean
-          order_index?: number
-          region_slug?: string | null
-          reviewed?: boolean
-          source?: string | null
-          tags?: string[]
-          title: string
-          type: string
-          where_to_watch_or_listen?: string | null
-          year?: number | null
-        }
-        Update: {
-          created_at?: string
-          creator?: string | null
-          description?: string
-          id?: string
-          igbo_language?: boolean
-          is_published?: boolean
-          order_index?: number
-          region_slug?: string | null
-          reviewed?: boolean
-          source?: string | null
-          tags?: string[]
-          title?: string
-          type?: string
-          where_to_watch_or_listen?: string | null
-          year?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "culture_items_region_slug_fkey"
-            columns: ["region_slug"]
-            isOneToOne: false
-            referencedRelation: "dialect_regions"
-            referencedColumns: ["slug"]
-          },
-        ]
-      }
       dialect_regions: {
         Row: {
           area: string
