@@ -186,13 +186,15 @@ export function useTTS() {
       });
 
       if (!response.ok) {
-        console.warn("YarnGPT TTS request failed:", response.status);
+        // The tts function explains which providers it tried and why they failed.
+        const detail = await response.text().catch(() => "");
+        console.warn("TTS request failed:", response.status, detail.slice(0, 500));
         return null;
       }
 
       const contentType = response.headers.get("content-type") ?? "";
       if (!contentType.includes("audio")) {
-        console.warn("YarnGPT TTS returned non-audio response");
+        console.warn("TTS returned a non-audio response");
         return null;
       }
 
@@ -201,7 +203,7 @@ export function useTTS() {
       audioBlobUrlRef.current = audioUrl;
       return audioUrl;
     } catch (err) {
-      console.warn("YarnGPT TTS fetch error:", err);
+      console.warn("TTS fetch error:", err);
       return null;
     }
   }, []);
@@ -209,6 +211,9 @@ export function useTTS() {
   const fetchIgboApiAudio = useCallback(async (text: string): Promise<string | null> => {
     const trimmed = text.trim().normalize("NFC");
     if (!trimmed) return null;
+    // The Igbo API is a dictionary: it has recordings of words and short phrases,
+    // and rejects whole sentences (400), so don't ask it for those.
+    if (trimmed.split(/\s+/).length > 3) return null;
 
     const { words, error } = await getWords({ keyword: trimmed, strict: trimmed.length <= 12 });
     if (error || !words?.length) return null;

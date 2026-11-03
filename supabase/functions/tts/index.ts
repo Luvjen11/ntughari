@@ -30,8 +30,13 @@ function audioResponse(audio: ArrayBuffer, cache: "hit" | "miss", provider: TtsP
 
 type TtsProvider = "yarngpt" | "elevenlabs";
 
+/** Secrets pasted into the dashboard often carry a stray space or newline, which providers reject as malformed. */
+function secret(name: string): string {
+  return Deno.env.get(name)?.trim() ?? "";
+}
+
 function elevenLabsConfigured(): boolean {
-  return !!(Deno.env.get("ELEVENLABS_API_KEY") && Deno.env.get("ELEVENLABS_VOICE_ID"));
+  return !!(secret("ELEVENLABS_API_KEY") && secret("ELEVENLABS_VOICE_ID"));
 }
 
 /**
@@ -39,7 +44,7 @@ function elevenLabsConfigured(): boolean {
  * first; YarnGPT always follows so playback keeps working when credits run out.
  */
 function generationOrder(): TtsProvider[] {
-  const wantsEleven = Deno.env.get("TTS_PROVIDER")?.toLowerCase().trim() === "elevenlabs";
+  const wantsEleven = secret("TTS_PROVIDER").toLowerCase() === "elevenlabs";
   return wantsEleven && elevenLabsConfigured() ? ["elevenlabs", "yarngpt"] : ["yarngpt"];
 }
 
@@ -99,7 +104,7 @@ async function writeCache(key: string, audio: ArrayBuffer): Promise<void> {
 type GenerateResult = { ok: true; audio: ArrayBuffer } | { ok: false; status: number; details: string };
 
 async function generateYarnGPT(text: string, voice: string, responseFormat: string): Promise<GenerateResult> {
-  const apiKey = Deno.env.get("YARNGPT_API_KEY");
+  const apiKey = secret("YARNGPT_API_KEY");
   if (!apiKey) return { ok: false, status: 500, details: "YARNGPT_API_KEY not set" };
 
   const response = await fetch("https://yarngpt.ai/api/v1/tts", {
@@ -112,7 +117,7 @@ async function generateYarnGPT(text: string, voice: string, responseFormat: stri
 }
 
 async function generateElevenLabs(text: string, voiceId: string, modelId: string): Promise<GenerateResult> {
-  const apiKey = Deno.env.get("ELEVENLABS_API_KEY")!;
+  const apiKey = secret("ELEVENLABS_API_KEY");
   const response = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
     {
@@ -151,8 +156,8 @@ serve(async (req: Request) => {
     const allowedVoices = ["Chinenye", "Nonso", "Idera", "Adaora"];
     const yarnVoice = allowedVoices.includes(voice) ? voice : "Idera";
 
-    const elevenVoice = Deno.env.get("ELEVENLABS_VOICE_ID") ?? "";
-    const elevenModel = Deno.env.get("ELEVENLABS_TTS_MODEL")?.trim() || "eleven_v3";
+    const elevenVoice = secret("ELEVENLABS_VOICE_ID");
+    const elevenModel = secret("ELEVENLABS_TTS_MODEL") || "eleven_v3";
     const keys: Record<TtsProvider, Promise<string>> = {
       elevenlabs: cacheKey(["elevenlabs", elevenVoice, elevenModel, safeText]),
       yarngpt: cacheKey(["yarngpt", yarnVoice, responseFormat, safeText]),
@@ -169,7 +174,7 @@ serve(async (req: Request) => {
 
     // Each provider in turn: its cached clip, else generate. A YarnGPT clip cached
     // earlier never blocks generating the preferred ElevenLabs one.
-    let lastError: { provider: TtsProvider; status: number; details: string } | null = null;
+    const attempts: { provider: TtsProvider; status: number; details: string }[] = [];
     for (const provider of order) {
       const cached = await readCache(await keys[provider]);
       if (cached) return audioResponse(cached, "hit", provider);
@@ -185,13 +190,24 @@ serve(async (req: Request) => {
         return audioResponse(result.audio, "miss", provider);
       }
       console.error(`${provider} TTS error:`, result.status, result.details);
-      lastError = { provider, status: result.status, details: result.details };
+      attempts.push({ provider, status: result.status, details: result.details.slice(0, 300) });
     }
 
-    const status = lastError?.status ?? 502;
+    // 502, not the provider's own status: a provider's 401 means a bad provider key,
+    // not that the learner is signed out. `configured` says which secrets exist
+    // (never their values) so a failure can be diagnosed from the browser.
     return jsonResponse(
-      { error: "TTS generation failed", provider: lastError?.provider, details: lastError?.details, status },
-      status >= 400 && status < 600 ? status : 502
+      {
+        error: "TTS generation failed",
+        attempts,
+        configured: {
+          ttsProvider: secret("TTS_PROVIDER") || null,
+          elevenlabsKey: !!secret("ELEVENLABS_API_KEY"),
+          elevenlabsVoice: !!secret("ELEVENLABS_VOICE_ID"),
+          yarngptKey: !!secret("YARNGPT_API_KEY"),
+        },
+      },
+      502
     );
   } catch (error) {
     console.error("TTS error:", error);
