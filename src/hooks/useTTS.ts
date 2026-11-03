@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import { getWords } from "@/lib/igboApi";
 import { DEFAULT_YARNGPT_VOICE, type YarnGPTVoice } from "@/lib/ttsConstants";
 import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
-import { looksLikeIgbo, splitForTTS } from "@/lib/ttsUtils";
+import { chargeableLength, looksLikeIgbo, MIN_YARNGPT_CHARGEABLE, splitForTTS } from "@/lib/ttsUtils";
 
 interface TTSOptions {
   rate?: number;
@@ -20,8 +20,6 @@ export interface IgboAudioOptions {
   voice?: YarnGPTVoice;
 }
 
-/** Skip YarnGPT for single letters — API often 500s; Igbo API works better for words */
-const MIN_YARNGPT_LENGTH = 3;
 
 export function useTTS() {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -172,7 +170,7 @@ export function useTTS() {
 
   const fetchYarnGPTAudio = useCallback(async (text: string, voice: YarnGPTVoice): Promise<string | null> => {
     const trimmed = text.trim();
-    if (trimmed.length < MIN_YARNGPT_LENGTH) return null;
+    if (chargeableLength(trimmed) < MIN_YARNGPT_CHARGEABLE) return null;
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -237,7 +235,7 @@ export function useTTS() {
       window.speechSynthesis?.cancel();
 
       const tryYarnGPT = async () => {
-        if (trimmed.length < MIN_YARNGPT_LENGTH) return false;
+        if (chargeableLength(trimmed) < MIN_YARNGPT_CHARGEABLE) return false;
         const url = await fetchYarnGPTAudio(trimmed, voice);
         if (!url) return false;
         playAudioUrl(url, "yarngpt", () => undefined);

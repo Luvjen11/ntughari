@@ -6,11 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
 import { DEFAULT_YARNGPT_VOICE } from "@/lib/ttsConstants";
-import { looksLikeIgbo, splitForTTS } from "@/lib/ttsUtils";
+import { chargeableLength, looksLikeIgbo, MIN_YARNGPT_CHARGEABLE, splitForTTS } from "@/lib/ttsUtils";
 import { proverbText } from "@/lib/proverbs";
 
-/** Matches useTTS: shorter text never goes to the TTS function. */
-const MIN_TTS_LENGTH = 3;
 const CONCURRENCY = 2;
 
 type SourceId = "proverbs" | "phrases" | "vocabWords" | "vocabExamples" | "letterExamples" | "stories";
@@ -97,7 +95,7 @@ export default function AdminAudio() {
     const texts = (Object.keys(sources) as SourceId[])
       .filter((id) => selected[id])
       .flatMap((id) => sources[id])
-      .filter((t) => t.length >= MIN_TTS_LENGTH);
+      .filter((t) => chargeableLength(t) >= MIN_YARNGPT_CHARGEABLE);
     return [...new Set(texts)];
   }, [sources, selected]);
 
