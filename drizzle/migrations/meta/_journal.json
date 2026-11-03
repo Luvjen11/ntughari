@@ -15,6 +15,20 @@
       "when": 1793717586005,
       "tag": "0001_dialects",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793719207045,
+      "tag": "0002_audio_url_and_use_this_word",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793719210788,
+      "tag": "0003_saved_api_word_snapshots",
+      "breakpoints": true
     }
   ]
 }
