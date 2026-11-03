@@ -15,12 +15,22 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-function audioResponse(audio: ArrayBuffer, cache: "hit" | "miss", provider: TtsProvider) {
-  return new Response(audio, {
+interface Clip {
+  audio: ArrayBuffer;
+  /** As the provider (or storage) reported it; YarnGPT and ElevenLabs may differ. */
+  contentType: string;
+}
+
+function audioType(header: string | null): string {
+  return header?.startsWith("audio/") ? header.split(";")[0] : "audio/mpeg";
+}
+
+function audioResponse(clip: Clip, cache: "hit" | "miss", provider: TtsProvider) {
+  return new Response(clip.audio, {
     headers: {
       ...corsHeaders,
-      "Content-Type": "audio/mpeg",
-      "Content-Disposition": 'inline; filename="igbo-audio.mp3"',
+      "Content-Type": clip.contentType,
+      "Content-Disposition": "inline",
       "Cache-Control": "public, max-age=86400",
       "X-TTS-Cache": cache,
       "X-TTS-Provider": provider,
@@ -65,7 +75,7 @@ function storageConfig() {
   return url && serviceKey ? { url, serviceKey } : null;
 }
 
-async function readCache(key: string): Promise<ArrayBuffer | null> {
+async function readCache(key: string): Promise<Clip | null> {
   const cfg = storageConfig();
   if (!cfg) return null;
   try {
@@ -73,13 +83,13 @@ async function readCache(key: string): Promise<ArrayBuffer | null> {
       headers: { Authorization: `Bearer ${cfg.serviceKey}`, apikey: cfg.serviceKey },
     });
     if (!res.ok) return null;
-    return await res.arrayBuffer();
+    return { audio: await res.arrayBuffer(), contentType: audioType(res.headers.get("content-type")) };
   } catch {
     return null;
   }
 }
 
-async function writeCache(key: string, audio: ArrayBuffer): Promise<void> {
+async function writeCache(key: string, clip: Clip): Promise<void> {
   const cfg = storageConfig();
   if (!cfg) return;
   try {
@@ -88,10 +98,10 @@ async function writeCache(key: string, audio: ArrayBuffer): Promise<void> {
       headers: {
         Authorization: `Bearer ${cfg.serviceKey}`,
         apikey: cfg.serviceKey,
-        "Content-Type": "audio/mpeg",
+        "Content-Type": clip.contentType,
         "x-upsert": "true",
       },
-      body: audio,
+      body: clip.audio,
     });
     if (!res.ok) console.warn("TTS cache write failed:", res.status, await res.text());
   } catch (e) {
@@ -101,19 +111,20 @@ async function writeCache(key: string, audio: ArrayBuffer): Promise<void> {
 
 // ---- Providers
 
-type GenerateResult = { ok: true; audio: ArrayBuffer } | { ok: false; status: number; details: string };
+type GenerateResult = ({ ok: true } & Clip) | { ok: false; status: number; details: string };
 
-async function generateYarnGPT(text: string, voice: string, responseFormat: string): Promise<GenerateResult> {
+async function generateYarnGPT(text: string, voice: string): Promise<GenerateResult> {
   const apiKey = secret("YARNGPT_API_KEY");
   if (!apiKey) return { ok: false, status: 500, details: "YARNGPT_API_KEY not set" };
 
   const response = await fetch("https://yarngpt.ai/api/v1/tts", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice, response_format: responseFormat }),
+    // YarnGPT now rejects unknown fields (response_format included) with a 422.
+    body: JSON.stringify({ text, voice }),
   });
   if (!response.ok) return { ok: false, status: response.status, details: await response.text() };
-  return { ok: true, audio: await response.arrayBuffer() };
+  return { ok: true, audio: await response.arrayBuffer(), contentType: audioType(response.headers.get("content-type")) };
 }
 
 async function generateElevenLabs(text: string, voiceId: string, modelId: string): Promise<GenerateResult> {
@@ -127,7 +138,7 @@ async function generateElevenLabs(text: string, voiceId: string, modelId: string
     }
   );
   if (!response.ok) return { ok: false, status: response.status, details: await response.text() };
-  return { ok: true, audio: await response.arrayBuffer() };
+  return { ok: true, audio: await response.arrayBuffer(), contentType: audioType(response.headers.get("content-type")) };
 }
 
 serve(async (req: Request) => {
@@ -183,14 +194,15 @@ serve(async (req: Request) => {
       const result =
         provider === "elevenlabs"
           ? await generateElevenLabs(safeText, elevenVoice, elevenModel)
-          : await generateYarnGPT(safeText, yarnVoice, responseFormat);
+          : await generateYarnGPT(safeText, yarnVoice);
 
       if (result.ok) {
-        await writeCache(await keys[provider], result.audio);
-        return audioResponse(result.audio, "miss", provider);
+        const clip = { audio: result.audio, contentType: result.contentType };
+        await writeCache(await keys[provider], clip);
+        return audioResponse(clip, "miss", provider);
       }
       console.error(`${provider} TTS error:`, result.status, result.details);
-      attempts.push({ provider, status: result.status, details: result.details.slice(0, 300) });
+      attempts.push({ provider, status: result.status, details: result.details.slice(0, 800) });
     }
 
     // 502, not the provider's own status: a provider's 401 means a bad provider key,
