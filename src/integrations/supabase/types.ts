@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      dialect_regions: {
+        Row: {
+          area: string
+          community_note: string | null
+          created_at: string
+          description: string | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          order_index: number
+          slug: string
+        }
+        Insert: {
+          area: string
+          community_note?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          order_index?: number
+          slug: string
+        }
+        Update: {
+          area?: string
+          community_note?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          order_index?: number
+          slug?: string
+        }
+        Relationships: []
+      }
+      dialect_variants: {
+        Row: {
+          audio_url: string | null
+          contributor: string | null
+          created_at: string
+          english_gloss: string
+          id: string
+          notes: string | null
+          region_id: string
+          reviewed: boolean
+          standard_igbo: string
+          variant: string
+          vocabulary_id: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          contributor?: string | null
+          created_at?: string
+          english_gloss: string
+          id?: string
+          notes?: string | null
+          region_id: string
+          reviewed?: boolean
+          standard_igbo: string
+          variant: string
+          vocabulary_id?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          contributor?: string | null
+          created_at?: string
+          english_gloss?: string
+          id?: string
+          notes?: string | null
+          region_id?: string
+          reviewed?: boolean
+          standard_igbo?: string
+          variant?: string
+          vocabulary_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dialect_variants_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "dialect_regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dialect_variants_vocabulary_id_fkey"
+            columns: ["vocabulary_id"]
+            isOneToOne: false
+            referencedRelation: "vocabulary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback_rate_limit_events: {
         Row: {
           created_at: string
@@ -201,6 +297,57 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      proverbs: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          dialect: string | null
+          id: string
+          igbo_first: string
+          igbo_second: string
+          is_published: boolean
+          literal_translation: string
+          meaning: string
+          order_index: number
+          reviewed: boolean
+          source: string | null
+          theme: string
+          usage_note: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          dialect?: string | null
+          id?: string
+          igbo_first: string
+          igbo_second: string
+          is_published?: boolean
+          literal_translation: string
+          meaning: string
+          order_index?: number
+          reviewed?: boolean
+          source?: string | null
+          theme: string
+          usage_note?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          dialect?: string | null
+          id?: string
+          igbo_first?: string
+          igbo_second?: string
+          is_published?: boolean
+          literal_translation?: string
+          meaning?: string
+          order_index?: number
+          reviewed?: boolean
+          source?: string | null
+          theme?: string
+          usage_note?: string | null
         }
         Relationships: []
       }
@@ -580,7 +727,11 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       feedback_category: "issue" | "praise" | "feature"
-      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
+      practice_type:
+        | "translation"
+        | "fill_gap"
+        | "phrase_rebuild"
+        | "finish_proverb"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -710,7 +861,12 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       feedback_category: ["issue", "praise", "feature"],
-      practice_type: ["translation", "fill_gap", "phrase_rebuild"],
+      practice_type: [
+        "translation",
+        "fill_gap",
+        "phrase_rebuild",
+        "finish_proverb",
+      ],
     },
   },
 } as const
