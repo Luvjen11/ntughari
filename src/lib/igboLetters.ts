@@ -1,3 +1,5 @@
+import { chargeableLength, MIN_YARNGPT_CHARGEABLE } from "@/lib/ttsUtils";
+
 /** Vowels (and syllabic m, n) are said as they are; other letters are recited with -a (b → ba, gb → gba). */
 const SAID_ALONE = new Set(["a", "e", "i", "ị", "o", "ọ", "u", "ụ"]);
 
@@ -12,8 +14,6 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/** Generated speech needs at least this many characters. */
-const MIN_SPOKEN_LENGTH = 20;
 
 /**
  * What to say when a letter is tapped: its sound, an example word, and the sound
@@ -25,6 +25,6 @@ export function letterPhrase(character: string, exampleWord?: string | null): st
   const sound = capitalize(letterSound(character));
   if (!sound) return "";
   let phrase = exampleWord?.trim() ? `${sound}, dị ka ${exampleWord.trim()}. ${sound}.` : `${sound}.`;
-  while (phrase.length < MIN_SPOKEN_LENGTH) phrase = `${sound}. ${phrase}`;
+  while (chargeableLength(phrase) < MIN_YARNGPT_CHARGEABLE) phrase = `${sound}. ${phrase}`;
   return phrase.normalize("NFC");
 }
