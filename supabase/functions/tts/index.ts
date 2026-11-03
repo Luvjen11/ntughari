@@ -26,6 +26,16 @@ function audioType(header: string | null): string {
   return header?.startsWith("audio/") ? header.split(";")[0] : "audio/mpeg";
 }
 
+/** MP3, WAV, OGG and FLAC all begin with a recognisable marker; a JSON job receipt does not. */
+function looksLikeAudio(bytes: ArrayBuffer): boolean {
+  const b = new Uint8Array(bytes.slice(0, 4));
+  if (b.length < 4) return false;
+  const head = String.fromCharCode(...b);
+  if (head.startsWith("ID3") || head === "RIFF" || head === "OggS" || head === "fLaC") return true;
+  // MPEG frame sync: first byte 0xFF, next byte's three top bits set.
+  return b[0] === 0xff && (b[1] & 0xe0) === 0xe0;
+}
+
 function audioResponse(clip: Clip, cache: "hit" | "miss", provider: TtsProvider) {
   return new Response(clip.audio, {
     headers: {
@@ -85,9 +95,10 @@ async function readCache(key: string): Promise<Clip | null> {
     });
     if (!res.ok) return null;
     const type = res.headers.get("content-type") || "";
+    const audio = await res.arrayBuffer();
     // An older version saved a job receipt here as if it were audio; never play that.
-    if (type.includes("json") || type.startsWith("text/")) return null;
-    return { audio: await res.arrayBuffer(), contentType: audioType(type) };
+    if (!looksLikeAudio(audio)) return null;
+    return { audio, contentType: audioType(type) };
   } catch {
     return null;
   }
@@ -95,7 +106,7 @@ async function readCache(key: string): Promise<Clip | null> {
 
 async function writeCache(key: string, clip: Clip): Promise<void> {
   const cfg = storageConfig();
-  if (!cfg) return;
+  if (!cfg || !looksLikeAudio(clip.audio)) return;
   try {
     const res = await fetch(`${cfg.url}/storage/v1/object/${CACHE_BUCKET}/${key}.mp3`, {
       method: "POST",
