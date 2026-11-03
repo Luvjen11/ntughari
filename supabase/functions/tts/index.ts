@@ -138,6 +138,32 @@ async function isAdmin(req: Request): Promise<boolean> {
   return rows.length > 0;
 }
 
+// ---- Human recordings: stored privately (the workspace blocks public buckets),
+// streamed to learners here with the service role.
+
+const RECORDINGS_BUCKET = "recordings";
+
+/** "vocabulary/<id>-<time>.mp3": one folder, one file name, nothing that climbs out of the bucket. */
+function isSafeRecordingPath(path: string): boolean {
+  return /^[a-z0-9_-]+\/[A-Za-z0-9._-]+$/.test(path) && !path.includes("..");
+}
+
+async function readRecording(path: string): Promise<Response> {
+  const cfg = storageConfig();
+  if (!cfg) return jsonResponse({ error: "Storage not configured" }, 500);
+  const res = await fetch(`${cfg.url}/storage/v1/object/${RECORDINGS_BUCKET}/${path}`, {
+    headers: { Authorization: `Bearer ${cfg.serviceKey}`, apikey: cfg.serviceKey },
+  });
+  if (!res.ok) return jsonResponse({ error: "Recording not found" }, 404);
+  return new Response(await res.arrayBuffer(), {
+    headers: {
+      ...corsHeaders,
+      "Content-Type": res.headers.get("content-type") || "audio/mpeg",
+      "Cache-Control": "public, max-age=86400",
+    },
+  });
+}
+
 // ---- Providers
 
 type GenerateResult = ({ ok: true } & Clip) | { ok: false; status: number; details: string };
@@ -266,8 +292,14 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
-    const { text, voice = "idera", responseFormat = "mp3", regenerate = false, check = false } =
+    const { text, voice = "idera", responseFormat = "mp3", regenerate = false, check = false, recording } =
       await req.json();
+
+    // Play an uploaded human recording.
+    if (typeof recording === "string") {
+      if (!isSafeRecordingPath(recording)) return jsonResponse({ error: "Invalid recording path" }, 400);
+      return await readRecording(recording);
+    }
 
     // Admin "Regenerate": skip stored clips and overwrite them with a fresh one.
     if (regenerate === true && !(await isAdmin(req))) {

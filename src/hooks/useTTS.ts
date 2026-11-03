@@ -58,12 +58,28 @@ export function forgetClip(text: string) {
   void forgetDeviceClips(`\u0000${trimmed}`);
 }
 
-/** Generated Igbo speech for `text` as an object URL, or null if no provider could make it. */
-async function fetchClipUrl(text: string, voice: YarnGPTVoice): Promise<string | null> {
-  const trimmed = text.trim().normalize("NFC");
-  if (!trimmed) return null;
-  const key = `${voice}\u0000${trimmed}`;
+/** Uploaded human recordings are stored privately and saved as "recording:<path>". */
+export const RECORDING_PREFIX = "recording:";
 
+/** Generated Igbo speech for `text` as an object URL, or null if no provider could make it. */
+function fetchClipUrl(text: string, voice: YarnGPTVoice): Promise<string | null> {
+  const trimmed = text.trim().normalize("NFC");
+  if (!trimmed) return Promise.resolve(null);
+  return fetchAudioUrl(`${voice}\u0000${trimmed}`, { text: trimmed, voice, responseFormat: "mp3" });
+}
+
+/**
+ * A playable URL for an item's recording: a private "recording:<path>" is fetched
+ * through the tts function (and kept like any clip); any other URL plays as it is.
+ */
+function resolveRecordingUrl(url: string): Promise<string | null> {
+  if (!url.startsWith(RECORDING_PREFIX)) return Promise.resolve(url);
+  const path = url.slice(RECORDING_PREFIX.length);
+  return fetchAudioUrl(`recording\u0000${path}`, { recording: path });
+}
+
+/** Fetch audio from the tts function once, keeping it in memory and on the device. */
+async function fetchAudioUrl(key: string, body: Record<string, unknown>): Promise<string | null> {
   const cached = clipUrls.get(key);
   if (cached) {
     // Re-insert so the most recently played clips are the last to be evicted.
@@ -88,7 +104,7 @@ async function fetchClipUrl(text: string, voice: YarnGPTVoice): Promise<string |
       const response = await fetch(`${supabaseUrl}/functions/v1/tts`, {
         method: "POST",
         headers: supabaseFunctionHeaders(),
-        body: JSON.stringify({ text: trimmed, voice, responseFormat: "mp3" }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         // The tts function explains which providers it tried and why they failed.
@@ -282,7 +298,11 @@ export function useTTS() {
       const generation = begin(trimmed);
       const stale = () => generation !== generationRef.current;
 
-      if (options?.recordedUrl && (await playAndWait(options.recordedUrl, generation))) return finish(generation);
+      if (options?.recordedUrl) {
+        const recordingUrl = await resolveRecordingUrl(options.recordedUrl);
+        if (stale()) return;
+        if (recordingUrl && (await playAndWait(recordingUrl, generation))) return finish(generation);
+      }
       if (stale()) return;
 
       const dictionaryUrl = await fetchIgboApiUrl(trimmed);
