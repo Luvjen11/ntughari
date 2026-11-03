@@ -20,8 +20,10 @@ export interface IgboAudioOptions {
   voice?: YarnGPTVoice;
 }
 
-/** Skip YarnGPT for single letters — API often 500s; Igbo API works better for words */
-const MIN_YARNGPT_LENGTH = 3;
+/** YarnGPT bills by chargeable characters and refuses anything under 20 (422 INPUT_TOO_SHORT).
+ *  Shorter lines go to the dictionary recordings or the browser voice instead. */
+const MIN_YARNGPT_CHARGEABLE = 20;
+const chargeableLength = (text: string) => text.replace(/[^\p{L}\p{N}]/gu, "").length;
 
 export function useTTS() {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -172,7 +174,7 @@ export function useTTS() {
 
   const fetchYarnGPTAudio = useCallback(async (text: string, voice: YarnGPTVoice): Promise<string | null> => {
     const trimmed = text.trim();
-    if (trimmed.length < MIN_YARNGPT_LENGTH) return null;
+    if (chargeableLength(trimmed) < MIN_YARNGPT_CHARGEABLE) return null;
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -237,7 +239,7 @@ export function useTTS() {
       window.speechSynthesis?.cancel();
 
       const tryYarnGPT = async () => {
-        if (trimmed.length < MIN_YARNGPT_LENGTH) return false;
+        if (chargeableLength(trimmed) < MIN_YARNGPT_CHARGEABLE) return false;
         const url = await fetchYarnGPTAudio(trimmed, voice);
         if (!url) return false;
         playAudioUrl(url, "yarngpt", () => undefined);
