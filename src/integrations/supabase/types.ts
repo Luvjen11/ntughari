@@ -14,156 +14,26 @@ export type Database = {
   }
   public: {
     Tables: {
-      dialect_regions: {
+      feedback_rate_limit_events: {
         Row: {
-          area: string
-          community_note: string | null
           created_at: string
-          description: string | null
           id: string
-          latitude: number
-          longitude: number
-          name: string
-          order_index: number
-          slug: string
+          rate_key: string
         }
         Insert: {
-          area: string
-          community_note?: string | null
           created_at?: string
-          description?: string | null
           id?: string
-          latitude: number
-          longitude: number
-          name: string
-          order_index?: number
-          slug: string
+          rate_key: string
         }
         Update: {
-          area?: string
-          community_note?: string | null
           created_at?: string
-          description?: string | null
           id?: string
-          latitude?: number
-          longitude?: number
-          name?: string
-          order_index?: number
-          slug?: string
-        }
-        Relationships: []
-      }
-      dialect_variants: {
-        Row: {
-          audio_url: string | null
-          contributor: string | null
-          created_at: string
-          english_gloss: string
-          id: string
-          notes: string | null
-          region_id: string
-          reviewed: boolean
-          standard_igbo: string
-          variant: string
-          vocabulary_id: string | null
-        }
-        Insert: {
-          audio_url?: string | null
-          contributor?: string | null
-          created_at?: string
-          english_gloss: string
-          id?: string
-          notes?: string | null
-          region_id: string
-          reviewed?: boolean
-          standard_igbo: string
-          variant: string
-          vocabulary_id?: string | null
-        }
-        Update: {
-          audio_url?: string | null
-          contributor?: string | null
-          created_at?: string
-          english_gloss?: string
-          id?: string
-          notes?: string | null
-          region_id?: string
-          reviewed?: boolean
-          standard_igbo?: string
-          variant?: string
-          vocabulary_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dialect_variants_region_id_fkey"
-            columns: ["region_id"]
-            isOneToOne: false
-            referencedRelation: "dialect_regions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dialect_variants_vocabulary_id_fkey"
-            columns: ["vocabulary_id"]
-            isOneToOne: false
-            referencedRelation: "vocabulary"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proverbs: {
-        Row: {
-          audio_url: string | null
-          created_at: string
-          dialect: string | null
-          id: string
-          igbo_first: string
-          igbo_second: string
-          is_published: boolean
-          literal_translation: string
-          meaning: string
-          order_index: number
-          reviewed: boolean
-          source: string | null
-          theme: string
-          usage_note: string | null
-        }
-        Insert: {
-          audio_url?: string | null
-          created_at?: string
-          dialect?: string | null
-          id?: string
-          igbo_first: string
-          igbo_second: string
-          is_published?: boolean
-          literal_translation: string
-          meaning: string
-          order_index?: number
-          reviewed?: boolean
-          source?: string | null
-          theme: string
-          usage_note?: string | null
-        }
-        Update: {
-          audio_url?: string | null
-          created_at?: string
-          dialect?: string | null
-          id?: string
-          igbo_first?: string
-          igbo_second?: string
-          is_published?: boolean
-          literal_translation?: string
-          meaning?: string
-          order_index?: number
-          reviewed?: boolean
-          source?: string | null
-          theme?: string
-          usage_note?: string | null
+          rate_key?: string
         }
         Relationships: []
       }
       letter_examples: {
         Row: {
-          audio_url: string | null
           created_at: string
           english_translation: string
           id: string
@@ -171,7 +41,6 @@ export type Database = {
           letter_id: string
         }
         Insert: {
-          audio_url?: string | null
           created_at?: string
           english_translation: string
           id?: string
@@ -179,7 +48,6 @@ export type Database = {
           letter_id: string
         }
         Update: {
-          audio_url?: string | null
           created_at?: string
           english_translation?: string
           id?: string
@@ -260,7 +128,6 @@ export type Database = {
       }
       phrases: {
         Row: {
-          audio_url: string | null
           created_at: string
           cultural_note: string | null
           english_translation: string
@@ -269,7 +136,6 @@ export type Database = {
           order_index: number
         }
         Insert: {
-          audio_url?: string | null
           created_at?: string
           cultural_note?: string | null
           english_translation: string
@@ -278,7 +144,6 @@ export type Database = {
           order_index?: number
         }
         Update: {
-          audio_url?: string | null
           created_at?: string
           cultural_note?: string | null
           english_translation?: string
@@ -648,7 +513,6 @@ export type Database = {
       }
       vocabulary: {
         Row: {
-          audio_url: string | null
           category_id: string
           created_at: string
           cultural_note: string | null
@@ -660,7 +524,6 @@ export type Database = {
           igbo_word: string
         }
         Insert: {
-          audio_url?: string | null
           category_id: string
           created_at?: string
           cultural_note?: string | null
@@ -672,7 +535,6 @@ export type Database = {
           igbo_word: string
         }
         Update: {
-          audio_url?: string | null
           category_id?: string
           created_at?: string
           cultural_note?: string | null
@@ -718,12 +580,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       feedback_category: "issue" | "praise" | "feature"
-      practice_type:
-        | "translation"
-        | "fill_gap"
-        | "phrase_rebuild"
-        | "use_this_word"
-        | "finish_proverb"
+      practice_type: "translation" | "fill_gap" | "phrase_rebuild"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -739,12 +596,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -768,11 +625,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -793,11 +650,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -818,11 +675,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -835,11 +692,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -852,13 +709,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      practice_type: [
-        "translation",
-        "fill_gap",
-        "phrase_rebuild",
-        "use_this_word",
-        "finish_proverb",
-      ],
+      feedback_category: ["issue", "praise", "feature"],
+      practice_type: ["translation", "fill_gap", "phrase_rebuild"],
     },
   },
 } as const
