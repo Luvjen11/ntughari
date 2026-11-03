@@ -166,7 +166,9 @@ async function readRecording(path: string): Promise<Response> {
 
 // ---- Providers
 
-type GenerateResult = ({ ok: true } & Clip) | { ok: false; status: number; details: string };
+type GenerateResult =
+  | ({ ok: true } & Clip)
+  | { ok: false; status: number; details: string; retryAfterSeconds?: number };
 
 /** YarnGPT bills per character and refuses anything under 20 (422 INPUT_TOO_SHORT). */
 const YARNGPT_MIN_CHARS = 20;
@@ -198,10 +200,23 @@ function padForYarnGPT(text: string): string {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** How long YarnGPT asks us to back off after a 429 (Retry-After, in seconds), capped. */
-function retryAfterMs(res: Response, fallbackMs: number): number {
-  const seconds = Number(res.headers.get("retry-after"));
-  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 20000) : fallbackMs;
+/** Short back-offs are waited out here; a longer one (YarnGPT's daily quota) is reported back. */
+const MAX_RETRY_WAIT_MS = 20000;
+
+/**
+ * Seconds YarnGPT asks us to wait after a 429: the Retry-After header, or
+ * error.details.retry_after_seconds in the body (its daily quota answers that way).
+ */
+function retryAfterSeconds(res: Response, body: string): number | null {
+  const header = Number(res.headers.get("retry-after"));
+  if (Number.isFinite(header) && header > 0) return header;
+  try {
+    const seconds = (JSON.parse(body) as { error?: { details?: { retry_after_seconds?: unknown } } }).error
+      ?.details?.retry_after_seconds;
+    return typeof seconds === "number" && seconds > 0 ? seconds : null;
+  } catch {
+    return null;
+  }
 }
 
 async function generateYarnGPT(
@@ -217,7 +232,7 @@ async function generateYarnGPT(
   // Replaying the same Idempotency-Key returns the original job instead of billing twice.
   const idempotencyKey = await cacheKey(["idempotency", "yarngpt", voice, outputFormat, text]);
 
-  // On a 429 wait and resend; the Idempotency-Key makes a resend safe.
+  // On a short 429 wait and resend; the Idempotency-Key makes a resend safe.
   let queued: Response;
   for (let attempt = 1; ; attempt++) {
     queued = await fetch("https://yarngpt.ai/api/v1/tts", {
@@ -230,8 +245,14 @@ async function generateYarnGPT(
       // YarnGPT rejects unknown fields (response_format included) with a 422.
       body: JSON.stringify({ text, voice, output_format: outputFormat }),
     });
-    if (queued.status !== 429 || attempt === 3) break;
-    await sleep(retryAfterMs(queued, 2000 * attempt));
+    if (queued.status !== 429) break;
+    const details = await queued.text();
+    const waitSeconds = retryAfterSeconds(queued, details);
+    const waitMs = waitSeconds === null ? 2000 * attempt : waitSeconds * 1000;
+    if (attempt === 3 || waitMs > MAX_RETRY_WAIT_MS) {
+      return { ok: false, status: 429, details, retryAfterSeconds: waitSeconds ?? undefined };
+    }
+    await sleep(waitMs);
   }
   if (!queued.ok) return { ok: false, status: queued.status, details: await queued.text() };
 
@@ -250,8 +271,12 @@ async function generateYarnGPT(
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (statusRes.status === 429) {
-      await statusRes.body?.cancel();
-      wait = Math.max(wait, retryAfterMs(statusRes, 4000));
+      const details = await statusRes.text();
+      const waitSeconds = retryAfterSeconds(statusRes, details);
+      if (waitSeconds !== null && waitSeconds * 1000 > MAX_RETRY_WAIT_MS) {
+        return { ok: false, status: 429, details, retryAfterSeconds: waitSeconds };
+      }
+      wait = Math.max(wait, waitSeconds === null ? 4000 : waitSeconds * 1000);
       continue;
     }
     if (!statusRes.ok) return { ok: false, status: statusRes.status, details: await statusRes.text() };
@@ -372,7 +397,7 @@ serve(async (req: Request) => {
 
     // Each provider in turn: its cached clip, else generate. A YarnGPT clip cached
     // earlier never blocks generating the preferred ElevenLabs one.
-    const attempts: { provider: TtsProvider; status: number; details: string }[] = [];
+    const attempts: { provider: TtsProvider; status: number; details: string; retryAfterSeconds?: number }[] = [];
     for (const provider of order) {
       const cached = useCache ? await readCache(await keys[provider]) : null;
       if (cached) return audioResponse(cached, "hit", provider);
@@ -389,17 +414,28 @@ serve(async (req: Request) => {
         return audioResponse(clip, "miss", provider);
       }
       console.error(`${provider} TTS error:`, result.status, result.details);
-      attempts.push({ provider, status: result.status, details: result.details.slice(0, 800) });
+      attempts.push({
+        provider,
+        status: result.status,
+        details: result.details.slice(0, 800),
+        retryAfterSeconds: result.retryAfterSeconds,
+      });
     }
 
     // 502, not the provider's own status: a provider's 401 means a bad provider key,
     // not that the learner is signed out. `configured` says which secrets exist
     // (never their values) so a failure can be diagnosed from the browser.
+    // Every provider said "too many requests": the admin tool waits and retries, or
+    // stops and shows when to try again if the wait is long (YarnGPT's daily quota).
+    const rateLimited = attempts.length > 0 && attempts.every((a) => a.status === 429);
+    // The soonest any provider will take requests again; unknown if one didn't say.
+    const waits = attempts.map((a) => a.retryAfterSeconds);
+    const soonest = waits.every((w) => w !== undefined) ? Math.min(...(waits as number[])) : undefined;
     return jsonResponse(
       {
         error: "TTS generation failed",
-        // Every provider said "too many requests": the admin tool waits and retries.
-        rateLimited: attempts.length > 0 && attempts.every((a) => a.status === 429),
+        rateLimited,
+        retryAfterSeconds: rateLimited ? soonest : undefined,
         attempts,
         configured: {
           ttsProvider: secret("TTS_PROVIDER") || null,

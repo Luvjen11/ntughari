@@ -17,6 +17,8 @@ const CHECK_CONCURRENCY = 4;
 const GENERATE_GAP_MS = 1000;
 /** After "too many requests", wait this long before each retry of the same clip, then give up on it. */
 const RATE_LIMIT_WAITS_MS = [30_000, 60_000, 120_000];
+/** A rate limit longer than this (YarnGPT's daily quota) stops the run instead of retrying. */
+const LONG_WAIT_SECONDS = 300;
 
 type SourceId = "proverbs" | "letters" | "phrases" | "vocabWords" | "vocabExamples" | "letterExamples" | "stories";
 
@@ -125,6 +127,8 @@ interface GenerateResult {
   provider: string | null;
   error?: string;
   rateLimited?: boolean;
+  /** How long until the provider takes requests again, when it said. */
+  retryAfterSeconds?: number;
 }
 
 async function generateOne(text: string): Promise<GenerateResult> {
@@ -132,12 +136,15 @@ async function generateOne(text: string): Promise<GenerateResult> {
   if (!res.ok) {
     const body = await res.text();
     let rateLimited = res.status === 429;
+    let retryAfterSeconds: number | undefined;
     try {
-      rateLimited ||= (JSON.parse(body) as { rateLimited?: boolean }).rateLimited === true;
+      const data = JSON.parse(body) as { rateLimited?: boolean; retryAfterSeconds?: unknown };
+      rateLimited ||= data.rateLimited === true;
+      if (typeof data.retryAfterSeconds === "number" && data.retryAfterSeconds > 0) retryAfterSeconds = data.retryAfterSeconds;
     } catch {
       // not JSON
     }
-    return { cache: null, provider: null, error: `${res.status}: ${body.slice(0, 160)}`, rateLimited };
+    return { cache: null, provider: null, error: `${res.status}: ${body.slice(0, 160)}`, rateLimited, retryAfterSeconds };
   }
   await res.arrayBuffer();
   return { cache: res.headers.get("X-TTS-Cache"), provider: res.headers.get("X-TTS-Provider") };
@@ -146,6 +153,20 @@ async function generateOne(text: string): Promise<GenerateResult> {
 /** Rough credit cost: YarnGPT bills per character, at least 20 per clip. */
 function estimateCredits(texts: string[]): number {
   return texts.reduce((sum, t) => sum + Math.max(chargeableLength(t), MIN_YARNGPT_CHARGEABLE), 0);
+}
+
+/** "00:02", or "Tue 00:02" when it isn't today, in the viewer's time zone. */
+function formatResetTime(date: Date): string {
+  const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return date.toDateString() === new Date().toDateString()
+    ? time
+    : `${date.toLocaleDateString([], { weekday: "short" })} ${time}`;
+}
+
+/** "3 h 41 min" or "12 min". */
+function formatWait(seconds: number): string {
+  const minutes = Math.ceil(seconds / 60);
+  return minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min`;
 }
 
 /** Waits in short steps so Stop still works during a long pause. */
@@ -204,8 +225,12 @@ export default function AdminAudio() {
   const [missing, setMissing] = useState<string[] | null>(null);
   const [checked, setChecked] = useState({ done: 0, stored: 0, unknown: 0 });
   const [tally, setTally] = useState<Tally>(EMPTY_TALLY);
+  /** Clips in the latest run, so its progress still reads right once the queue shrinks. */
+  const [runTotal, setRunTotal] = useState(0);
   /** Seconds the run is waiting after a rate limit, or null. */
   const [rateWait, setRateWait] = useState<number | null>(null);
+  /** Set when the provider's daily limit stopped the run: when it takes requests again. */
+  const [limitReset, setLimitReset] = useState<{ at: Date; seconds: number } | null>(null);
 
   const queue = useMemo(() => {
     if (!sources) return [];
@@ -272,22 +297,38 @@ export default function AdminAudio() {
     stopRef.current = false;
     setBusy("generate");
     setTally(EMPTY_TALLY);
+    setRunTotal(items.length);
+    setLimitReset(null);
     const notMade: string[] = [];
     let processed = 0;
     for (const text of items) {
       if (stopRef.current) break;
       let result: GenerateResult;
+      let quotaUsedUp = false;
       for (let attempt = 0; ; attempt++) {
         try {
           result = await generateOne(text);
         } catch (e) {
           result = { cache: null, provider: null, error: (e as Error).message };
         }
-        if (!result.rateLimited || attempt >= RATE_LIMIT_WAITS_MS.length || stopRef.current) break;
-        setRateWait(RATE_LIMIT_WAITS_MS[attempt] / 1000);
-        await pause(RATE_LIMIT_WAITS_MS[attempt], stopRef);
+        if (!result.rateLimited || stopRef.current) break;
+        // Hours, not seconds: retrying can't help, so stop and say when to come back.
+        if ((result.retryAfterSeconds ?? 0) > LONG_WAIT_SECONDS) {
+          quotaUsedUp = true;
+          break;
+        }
+        if (attempt >= RATE_LIMIT_WAITS_MS.length) break;
+        const waitMs = Math.max(RATE_LIMIT_WAITS_MS[attempt], (result.retryAfterSeconds ?? 0) * 1000);
+        setRateWait(Math.round(waitMs / 1000));
+        await pause(waitMs, stopRef);
         setRateWait(null);
         if (stopRef.current) break;
+      }
+      if (quotaUsedUp) {
+        const seconds = result.retryAfterSeconds ?? 0;
+        setLimitReset({ at: new Date(Date.now() + seconds * 1000), seconds });
+        // This clip stays queued with everything after it; it isn't counted as failed.
+        break;
       }
       processed++;
       if (result.error) notMade.push(text);
@@ -316,7 +357,8 @@ export default function AdminAudio() {
   };
 
   const generatedCount = Object.values(tally.generated).reduce((a, b) => a + b, 0);
-  const generatePercent = toGenerate.length ? Math.round((tally.done / toGenerate.length) * 100) : 0;
+  const progressTotal = tally.done || busy === "generate" ? runTotal : toGenerate.length;
+  const generatePercent = progressTotal ? Math.round((tally.done / progressTotal) * 100) : 0;
   const lookupTotal = sources?.lookups.length ?? 0;
 
   const stopButton = (
@@ -420,7 +462,7 @@ export default function AdminAudio() {
         </div>
 
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm tabular-nums">
-          <div><dt className="text-foreground/70">Done</dt><dd className="font-display font-bold text-lg">{tally.done}/{toGenerate.length}</dd></div>
+          <div><dt className="text-foreground/70">Done</dt><dd className="font-display font-bold text-lg">{tally.done}/{progressTotal}</dd></div>
           <div><dt className="text-foreground/70">Already stored</dt><dd className="font-display font-bold text-lg">{tally.cached}</dd></div>
           <div>
             <dt className="text-foreground/70">Generated</dt>
@@ -432,6 +474,13 @@ export default function AdminAudio() {
           <div><dt className="text-foreground/70">Failed</dt><dd className="font-display font-bold text-lg">{tally.failed}</dd></div>
         </dl>
 
+        {limitReset && (
+          <p className="text-sm font-semibold px-3 py-2 rounded-lg border-2 border-foreground bg-card">
+            YarnGPT's daily limit is used up, so the run stopped. It takes requests again at about{" "}
+            {formatResetTime(limitReset.at)} (in {formatWait(limitReset.seconds)}). Everything not made yet
+            stays queued for then.
+          </p>
+        )}
         {rateWait !== null && (
           <p className="text-sm font-semibold">
             YarnGPT asked us to slow down. Waiting {rateWait} seconds, then trying the same clip again…
