@@ -222,7 +222,7 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
-    const { text, voice = "Idera", responseFormat = "mp3" } = await req.json();
+    const { text, voice = "idera", responseFormat = "mp3" } = await req.json();
 
     if (!text || typeof text !== "string") {
       return jsonResponse({ error: "Text is required" }, 400);
