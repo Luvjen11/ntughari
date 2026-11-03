@@ -29,6 +29,13 @@
       "when": 1793719210788,
       "tag": "0003_saved_api_word_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793726130923,
+      "tag": "0004_tutor_chats",
+      "breakpoints": true
     }
   ]
 }
