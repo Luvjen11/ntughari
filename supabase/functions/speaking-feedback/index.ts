@@ -24,7 +24,7 @@ interface SpeakingFeedback {
   };
 }
 
-function jsonResponse(body: unknown, status: number) {
+function jsonResponse(body: unknown, status: number = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
