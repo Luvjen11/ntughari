@@ -84,7 +84,10 @@ async function readCache(key: string): Promise<Clip | null> {
       headers: { Authorization: `Bearer ${cfg.serviceKey}`, apikey: cfg.serviceKey },
     });
     if (!res.ok) return null;
-    return { audio: await res.arrayBuffer(), contentType: audioType(res.headers.get("content-type")) };
+    const type = res.headers.get("content-type") || "";
+    // An older version saved a job receipt here as if it were audio; never play that.
+    if (type.includes("json") || type.startsWith("text/")) return null;
+    return { audio: await res.arrayBuffer(), contentType: audioType(type) };
   } catch {
     return null;
   }
@@ -114,26 +117,74 @@ async function writeCache(key: string, clip: Clip): Promise<void> {
 
 type GenerateResult = ({ ok: true } & Clip) | { ok: false; status: number; details: string };
 
-async function generateYarnGPT(text: string, voice: string): Promise<GenerateResult> {
+async function generateYarnGPT(
+  text: string,
+  voice: string,
+  outputFormat: string
+): Promise<GenerateResult> {
   const apiKey = secret("YARNGPT_API_KEY");
   if (!apiKey) return { ok: false, status: 500, details: "YARNGPT_API_KEY not set" };
 
-  // YarnGPT requires an Idempotency-Key header. Deriving it from voice + text means a
-  // retry of the same line reuses the same generation instead of costing a second one.
-  const idempotencyKey = await cacheKey(["idempotency", "yarngpt", voice, text]);
+  // The API queues a job and answers with a job_id; the clip is fetched once ready.
+  // Replaying the same Idempotency-Key returns the original job instead of billing twice.
+  const idempotencyKey = await cacheKey(["idempotency", "yarngpt", voice, outputFormat, text]);
 
-  const response = await fetch("https://yarngpt.ai/api/v1/tts", {
+  const queued = await fetch("https://yarngpt.ai/api/v1/tts", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       "Idempotency-Key": idempotencyKey,
     },
-    // YarnGPT now rejects unknown fields (response_format included) with a 422.
-    body: JSON.stringify({ text, voice }),
+    // YarnGPT rejects unknown fields (response_format included) with a 422.
+    body: JSON.stringify({ text, voice, output_format: outputFormat }),
   });
-  if (!response.ok) return { ok: false, status: response.status, details: await response.text() };
-  return { ok: true, audio: await response.arrayBuffer(), contentType: audioType(response.headers.get("content-type")) };
+  if (!queued.ok) return { ok: false, status: queued.status, details: await queued.text() };
+
+  const job = (await queued.json()) as { job_id?: string };
+  if (!job.job_id) return { ok: false, status: 502, details: "YarnGPT returned no job_id" };
+
+  // There is no webhook: poll until the clip is ready. Short lines finish in seconds.
+  const deadline = Date.now() + 30000;
+  let wait = 400;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    wait = Math.min(Math.round(wait * 1.6), 2000);
+
+    const statusRes = await fetch(`https://yarngpt.ai/api/v1/status/${job.job_id}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!statusRes.ok) return { ok: false, status: statusRes.status, details: await statusRes.text() };
+
+    const status = (await statusRes.json()) as {
+      status?: string;
+      audio_url?: string;
+      error_message?: string;
+      user_message?: string;
+    };
+
+    if (status.status === "completed" && status.audio_url) {
+      const clip = await fetch(status.audio_url);
+      if (!clip.ok) return { ok: false, status: clip.status, details: "YarnGPT clip download failed" };
+      const type = clip.headers.get("content-type") || "";
+      const audio = await clip.arrayBuffer();
+      // A JSON error page must never be cached as if it were audio.
+      if (!audio.byteLength || type.includes("json") || type.startsWith("text/")) {
+        return { ok: false, status: 502, details: `YarnGPT clip was not audio (${type || "unknown"})` };
+      }
+      return { ok: true, audio, contentType: audioType(type) };
+    }
+
+    if (status.status === "failed" || status.status === "error") {
+      return {
+        ok: false,
+        status: 502,
+        details: status.error_message || status.user_message || "YarnGPT job failed",
+      };
+    }
+  }
+
+  return { ok: false, status: 504, details: "YarnGPT job did not finish in time" };
 }
 
 async function generateElevenLabs(text: string, voiceId: string, modelId: string): Promise<GenerateResult> {
@@ -180,9 +231,11 @@ serve(async (req: Request) => {
 
     const elevenVoice = secret("ELEVENLABS_VOICE_ID");
     const elevenModel = secret("ELEVENLABS_TTS_MODEL") || "eleven_v3";
+    const allowedFormats = ["mp3", "wav", "opus", "flac"];
+    const outFormat = allowedFormats.includes(responseFormat) ? responseFormat : "mp3";
     const keys: Record<TtsProvider, Promise<string>> = {
       elevenlabs: cacheKey(["elevenlabs", elevenVoice, elevenModel, safeText]),
-      yarngpt: cacheKey(["yarngpt", yarnVoice, responseFormat, safeText]),
+      yarngpt: cacheKey(["yarngpt", yarnVoice, outFormat, safeText]),
     };
 
     const order = generationOrder();
@@ -205,7 +258,7 @@ serve(async (req: Request) => {
       const result =
         provider === "elevenlabs"
           ? await generateElevenLabs(safeText, elevenVoice, elevenModel)
-          : await generateYarnGPT(safeText, yarnVoice);
+          : await generateYarnGPT(safeText, yarnVoice, outFormat);
 
       if (result.ok) {
         const clip = { audio: result.audio, contentType: result.contentType };
