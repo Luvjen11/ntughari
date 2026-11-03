@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Volume2, Star, ArrowLeft } from "lucide-react";
+import { Star, ArrowLeft } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
+import { AudioStateIcon } from "@/components/AudioStateIcon";
+import { audioStateFor } from "@/lib/audioState";
+import { letterPhrase } from "@/lib/igboLetters";
 import { Link } from "react-router-dom";
 
 interface Letter {
@@ -20,7 +23,8 @@ interface LetterExample {
 }
 
 export default function Alphabet() {
-  const { speakIgboWord } = useTTS();
+  const tts = useTTS();
+  const { speakIgboWord, speakSentence, prefetchDictionary } = tts;
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [letterOfTheDay, setLetterOfTheDay] = useState<Letter | null>(null);
 
@@ -36,19 +40,44 @@ export default function Alphabet() {
     },
   });
 
-  const { data: examples } = useQuery({
-    queryKey: ["letter_examples", selectedLetter?.id],
+  // All examples in one request (a small table), so a tapped letter can be
+  // spoken with its example word straight away.
+  const { data: allExamples } = useQuery({
+    queryKey: ["letter_examples"],
     queryFn: async () => {
-      if (!selectedLetter) return [];
-      const { data, error } = await supabase
-        .from("letter_examples")
-        .select("*")
-        .eq("letter_id", selectedLetter.id);
+      const { data, error } = await supabase.from("letter_examples").select("*");
       if (error) throw error;
       return data as LetterExample[];
     },
-    enabled: !!selectedLetter,
+    staleTime: 10 * 60 * 1000,
   });
+
+  const examplesByLetter = useMemo(() => {
+    const map = new Map<string, LetterExample[]>();
+    for (const ex of allExamples ?? []) {
+      map.set(ex.letter_id, [...(map.get(ex.letter_id) ?? []), ex]);
+    }
+    return map;
+  }, [allExamples]);
+
+  const examples = useMemo(
+    () => (selectedLetter ? examplesByLetter.get(selectedLetter.id) ?? [] : undefined),
+    [selectedLetter, examplesByLetter]
+  );
+
+  /** "Ba, dị ka ọba. Ba." — the letter's sound said with its first example word. */
+  const phraseFor = (letter: Letter) =>
+    letterPhrase(letter.character, examplesByLetter.get(letter.id)?.[0]?.igbo_word);
+
+  const playLetter = (letter: Letter) => {
+    setSelectedLetter(letter);
+    void speakSentence(phraseFor(letter), { igbo: true });
+  };
+
+  // Warm up the free dictionary recordings for the open letter's example words.
+  useEffect(() => {
+    for (const ex of examples ?? []) prefetchDictionary(ex.igbo_word);
+  }, [examples, prefetchDictionary]);
 
   // Set letter of the day based on the current date
   useEffect(() => {
@@ -132,16 +161,16 @@ export default function Alphabet() {
                 </span>
               </div>
               <button
-                onClick={() => {
-                  setSelectedLetter(letterOfTheDay);
-                  speakIgboWord(letterOfTheDay.character);
-                }}
+                onClick={() => playLetter(letterOfTheDay)}
                 className="flex items-center gap-4"
+                aria-label={`Hear the letter ${letterOfTheDay.character}`}
               >
                 <span className="font-display text-5xl font-bold">
                   {letterOfTheDay.character}
                 </span>
-                <Volume2 className="text-foreground/60" size={24} />
+                <span className="text-foreground/60">
+                  <AudioStateIcon state={audioStateFor(phraseFor(letterOfTheDay), tts)} size={24} />
+                </span>
               </button>
             </div>
           </div>
@@ -162,10 +191,10 @@ export default function Alphabet() {
                 )}
               </div>
               <button
-                onClick={() => speakIgboWord(selectedLetter.character)}
+                onClick={() => playLetter(selectedLetter)}
                 className="brutal-button bg-primary flex items-center gap-2"
               >
-                <Volume2 size={20} />
+                <AudioStateIcon state={audioStateFor(phraseFor(selectedLetter), tts)} size={20} />
                 <span>Play</span>
               </button>
             </div>
@@ -192,9 +221,10 @@ export default function Alphabet() {
                       </div>
                       <button
                         onClick={() => speakIgboWord(example.igbo_word)}
+                        aria-label={`Hear ${example.igbo_word}`}
                         className="p-2 rounded-lg border-2 border-foreground bg-card hover:bg-primary transition-colors shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                       >
-                        <Volume2 size={18} />
+                        <AudioStateIcon state={audioStateFor(example.igbo_word, tts)} />
                       </button>
                     </div>
                   ))}
@@ -215,11 +245,9 @@ export default function Alphabet() {
           {letters.map((letter) => (
             <button
               key={letter.id}
-              onClick={() => {
-                setSelectedLetter(letter);
-                speakIgboWord(letter.character);
-              }}
-              className={`brutal-card p-4 flex items-center justify-center aspect-square transition-all
+              onClick={() => playLetter(letter)}
+              aria-label={`Hear the letter ${letter.character}`}
+              className={`brutal-card p-4 flex items-center justify-center aspect-square transition-all relative
                 ${selectedLetter?.id === letter.id 
                   ? "bg-primary" 
                   : "bg-card hover:bg-muted"
@@ -228,6 +256,11 @@ export default function Alphabet() {
               <span className="font-display text-2xl md:text-3xl font-bold">
                 {letter.character}
               </span>
+              {audioStateFor(phraseFor(letter), tts) === "loading" && (
+                <span className="absolute top-1.5 right-1.5">
+                  <AudioStateIcon state="loading" size={14} />
+                </span>
+              )}
             </button>
           ))}
         </div>

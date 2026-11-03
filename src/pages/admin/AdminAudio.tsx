@@ -8,15 +8,15 @@ import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
 import { DEFAULT_YARNGPT_VOICE } from "@/lib/ttsConstants";
 import { looksLikeIgbo, splitForTTS } from "@/lib/ttsUtils";
 import { proverbText } from "@/lib/proverbs";
+import { letterPhrase } from "@/lib/igboLetters";
 
-/** Matches useTTS: shorter text never goes to the TTS function. */
-const MIN_TTS_LENGTH = 3;
 const CONCURRENCY = 2;
 
-type SourceId = "proverbs" | "phrases" | "vocabWords" | "vocabExamples" | "letterExamples" | "stories";
+type SourceId = "proverbs" | "letters" | "phrases" | "vocabWords" | "vocabExamples" | "letterExamples" | "stories";
 
 const SOURCE_LABELS: Record<SourceId, string> = {
   proverbs: "Proverbs (whole proverb and opening)",
+  letters: "Alphabet letters (sound with an example word)",
   phrases: "Phrases",
   vocabExamples: "Vocabulary example sentences",
   vocabWords: "Vocabulary words",
@@ -45,15 +45,20 @@ function wordChunk(text: string | null | undefined): string[] {
 }
 
 async function loadSources(): Promise<Record<SourceId, string[]>> {
-  const [vocab, phrases, proverbs, letters, scenes] = await Promise.all([
+  const [vocab, phrases, proverbs, letters, scenes, alphabet] = await Promise.all([
     supabase.from("vocabulary").select("igbo_word, example_sentence_igbo"),
     supabase.from("phrases").select("igbo_phrase"),
     supabase.from("proverbs").select("igbo_first, igbo_second").eq("is_published", true),
-    supabase.from("letter_examples").select("igbo_word"),
+    supabase.from("letter_examples").select("letter_id, igbo_word"),
     supabase.from("story_scenes").select("narration_text").eq("is_active", true),
+    supabase.from("letters").select("id, character"),
   ]);
+  // Same phrase the Alphabet page asks for: the letter's sound with its first example word.
+  const firstExample = new Map<string, string>();
+  for (const ex of letters.data ?? []) if (!firstExample.has(ex.letter_id)) firstExample.set(ex.letter_id, ex.igbo_word);
   return {
     proverbs: (proverbs.data ?? []).flatMap((p) => [...sentenceChunks(proverbText(p)), ...sentenceChunks(p.igbo_first)]),
+    letters: (alphabet.data ?? []).flatMap((l) => sentenceChunks(letterPhrase(l.character, firstExample.get(l.id)))),
     phrases: (phrases.data ?? []).flatMap((p) => sentenceChunks(p.igbo_phrase)),
     vocabExamples: (vocab.data ?? []).flatMap((v) => sentenceChunks(v.example_sentence_igbo)),
     vocabWords: (vocab.data ?? []).flatMap((v) => wordChunk(v.igbo_word)),
@@ -82,6 +87,7 @@ export default function AdminAudio() {
   const { data: sources, isLoading } = useQuery({ queryKey: ["admin-audio-sources"], queryFn: loadSources });
   const [selected, setSelected] = useState<Record<SourceId, boolean>>({
     proverbs: true,
+    letters: true,
     phrases: true,
     vocabExamples: true,
     vocabWords: false,
@@ -97,7 +103,7 @@ export default function AdminAudio() {
     const texts = (Object.keys(sources) as SourceId[])
       .filter((id) => selected[id])
       .flatMap((id) => sources[id])
-      .filter((t) => t.length >= MIN_TTS_LENGTH);
+      .filter(Boolean);
     return [...new Set(texts)];
   }, [sources, selected]);
 

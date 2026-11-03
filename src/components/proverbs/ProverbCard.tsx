@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, Volume2 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { AudioStateIcon } from "@/components/AudioStateIcon";
 import { useSpeakProverb } from "@/hooks/useSpeakProverb";
 import { themeLabel, type Proverb } from "@/lib/proverbs";
 
@@ -10,7 +11,7 @@ interface ProverbCardProps {
 
 export function ProverbCard({ proverb, defaultOpen = false }: ProverbCardProps) {
   const [open, setOpen] = useState(defaultOpen);
-  const { speakProverb, isSpeaking } = useSpeakProverb();
+  const { speakProverb, audioState } = useSpeakProverb();
 
   return (
     <article className="brutal-card bg-card p-5 space-y-3">
@@ -27,11 +28,10 @@ export function ProverbCard({ proverb, defaultOpen = false }: ProverbCardProps) 
         <button
           type="button"
           onClick={() => speakProverb(proverb)}
-          disabled={isSpeaking}
           className="brutal-button bg-primary p-2 shrink-0 disabled:opacity-60"
           aria-label="Listen to this proverb"
         >
-          <Volume2 size={20} />
+          <AudioStateIcon state={audioState(proverb)} size={20} />
         </button>
       </div>
 

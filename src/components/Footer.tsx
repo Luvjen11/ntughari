@@ -1,4 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+
+/** Full-screen pages (the tutor chat) have no footer. */
+const NO_FOOTER_PATHS = ["/practice/conversation"];
 
 const learnLinks = [
   { to: "/alphabet", label: "Alphabet" },
@@ -42,6 +45,9 @@ function FooterColumn({ title, links }: { title: string; links: { to: string; la
 }
 
 export function Footer() {
+  const { pathname } = useLocation();
+  if (NO_FOOTER_PATHS.includes(pathname)) return null;
+
   return (
     <footer className="border-t-3 border-foreground bg-card mt-auto">
       <div className="container mx-auto px-4 py-10">

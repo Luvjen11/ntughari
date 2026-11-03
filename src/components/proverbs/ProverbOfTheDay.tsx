@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Volume2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { AudioStateIcon } from "@/components/AudioStateIcon";
 import { useProverbs } from "@/hooks/useProverbs";
 import { proverbOfTheDay, themeLabel } from "@/lib/proverbs";
 import { useSpeakProverb } from "@/hooks/useSpeakProverb";
@@ -11,7 +12,7 @@ interface ProverbOfTheDayProps {
 
 export function ProverbOfTheDay({ showLink = true }: ProverbOfTheDayProps) {
   const { data: proverbs } = useProverbs();
-  const { speakProverb, isSpeaking } = useSpeakProverb();
+  const { speakProverb, audioState } = useSpeakProverb();
   const today = proverbOfTheDay(proverbs ?? []);
 
   if (!today) return null;
@@ -43,10 +44,9 @@ export function ProverbOfTheDay({ showLink = true }: ProverbOfTheDayProps) {
         <button
           type="button"
           onClick={() => speakProverb(today)}
-          disabled={isSpeaking}
           className="brutal-button bg-card flex items-center gap-2 disabled:opacity-60"
         >
-          <Volume2 size={18} />
+          <AudioStateIcon state={audioState(today)} />
           Listen
         </button>
         {showLink && (

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { ArrowLeft, Info, MapPin, Mic, Volume2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Info, MapPin, Mic, Volume2 } from "lucide-react";
+import { PLACE_DETAILS, readMoreUrl } from "@/lib/placeDetails";
 import { useDialectRegions, useDialectVariants } from "@/hooks/useDialects";
 import {
   areaColor,
@@ -69,6 +70,7 @@ export default function DialectMap() {
   const playRecording = useRecordingPlayer();
 
   const selected = regions?.find((r) => r.id === selectedId) ?? null;
+  const selectedDetails = selected ? PLACE_DETAILS[selected.slug] : undefined;
   const glosses = useMemo(
     () => [...new Set((variants ?? []).map((v) => v.english_gloss))].sort(),
     [variants]
@@ -189,8 +191,47 @@ export default function DialectMap() {
                     <MapPin size={14} /> {selected.area}
                   </p>
                   <h2 className="font-display text-2xl font-bold">{selected.name}</h2>
-                  {selected.description && <p>{selected.description}</p>}
+                  {selectedDetails ? (
+                    <p>{selectedDetails.overview}</p>
+                  ) : (
+                    selected.description && <p>{selected.description}</p>
+                  )}
                 </div>
+
+                {selectedDetails && selectedDetails.knownFor.length > 0 && (
+                  <div className="space-y-1.5">
+                    <h3 className="font-display font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                      Known for
+                    </h3>
+                    <ul className="flex flex-wrap gap-1.5">
+                      {selectedDetails.knownFor.map((item) => (
+                        <li key={item} className="text-sm px-2.5 py-0.5 rounded-full border-2 border-foreground/20 bg-muted">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {selectedDetails?.history && (
+                  <div className="space-y-1">
+                    <h3 className="font-display font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                      History
+                    </h3>
+                    <p className="text-sm leading-relaxed">{selectedDetails.history}</p>
+                  </div>
+                )}
+
+                {selectedDetails && (
+                  <a
+                    href={readMoreUrl(selectedDetails)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm font-display font-semibold underline underline-offset-2"
+                  >
+                    Read more about {selected.name} <ExternalLink size={14} />
+                  </a>
+                )}
 
                 {selected.community_note && (
                   <div className="flex gap-2 p-3 rounded-lg border-2 border-secondary bg-secondary/30 text-sm">

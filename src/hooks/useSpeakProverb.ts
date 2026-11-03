@@ -1,13 +1,15 @@
 import { useTTS } from "@/hooks/useTTS";
+import { audioStateFor, type AudioState } from "@/lib/audioState";
 import { proverbText, type Proverb } from "@/lib/proverbs";
 
 /** Play a proverb: a human recording when we have one, otherwise generated Igbo speech. */
 export function useSpeakProverb() {
-  const { speakIgboWord, speakSentence, isSpeaking } = useTTS();
+  const tts = useTTS();
   const speakProverb = (p: Proverb) => {
     const text = proverbText(p);
-    if (p.audio_url) void speakIgboWord(text, { recordedUrl: p.audio_url });
-    else void speakSentence(text, { igbo: true });
+    if (p.audio_url) void tts.speakIgboWord(text, { recordedUrl: p.audio_url });
+    else void tts.speakSentence(text, { igbo: true });
   };
-  return { speakProverb, isSpeaking };
+  const audioState = (p: Proverb): AudioState => audioStateFor(proverbText(p), tts);
+  return { speakProverb, audioState, speakSentence: tts.speakSentence, tts };
 }

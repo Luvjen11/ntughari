@@ -113,6 +113,22 @@ async function writeCache(key: string, clip: Clip): Promise<void> {
 
 type GenerateResult = ({ ok: true } & Clip) | { ok: false; status: number; details: string };
 
+/** YarnGPT bills per character and refuses anything under this length. */
+const YARNGPT_MIN_CHARS = 20;
+
+/**
+ * Short words and letters are below YarnGPT's minimum, so say them inside a
+ * carrier phrase: "Okwu a bụ ala. Ala." ("This word is ala. Ala."), repeating
+ * the word until it is long enough. The cache key stays the original text.
+ */
+function padForYarnGPT(text: string): string {
+  if (text.length >= YARNGPT_MIN_CHARS) return text;
+  const word = text.replace(/[.!?…]+$/, "");
+  let padded = `Okwu a bụ ${word}.`;
+  while (padded.length < YARNGPT_MIN_CHARS) padded += ` ${word}.`;
+  return padded;
+}
+
 async function generateYarnGPT(text: string, voice: string): Promise<GenerateResult> {
   const apiKey = secret("YARNGPT_API_KEY");
   if (!apiKey) return { ok: false, status: 500, details: "YARNGPT_API_KEY not set" };
@@ -121,7 +137,7 @@ async function generateYarnGPT(text: string, voice: string): Promise<GenerateRes
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     // YarnGPT now rejects unknown fields (response_format included) with a 422.
-    body: JSON.stringify({ text, voice }),
+    body: JSON.stringify({ text: padForYarnGPT(text), voice }),
   });
   if (!response.ok) return { ok: false, status: response.status, details: await response.text() };
   return { ok: true, audio: await response.arrayBuffer(), contentType: audioType(response.headers.get("content-type")) };

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, Loader2, Volume2, X } from "lucide-react";
+import { ArrowLeft, Check, Loader2, X } from "lucide-react";
+import { AudioStateIcon } from "@/components/AudioStateIcon";
+import { audioStateFor } from "@/lib/audioState";
 import { Button } from "@/components/ui/button";
 import { PracticeProgress } from "@/components/practice/PracticeProgress";
 import { PracticeResult } from "@/components/practice/PracticeResult";
 import { usePracticeSession } from "@/hooks/usePracticeSession";
 import { useProverbs } from "@/hooks/useProverbs";
 import { useSpeakProverb } from "@/hooks/useSpeakProverb";
-import { useTTS } from "@/hooks/useTTS";
 import type { Proverb } from "@/lib/proverbs";
 
 const OPTIONS_PER_QUESTION = 4;
@@ -43,8 +44,7 @@ function buildQuestions(proverbs: Proverb[], count: number): ProverbQuestion[] {
 export default function FinishProverbPractice() {
   const navigate = useNavigate();
   const { data: proverbs, isLoading } = useProverbs();
-  const { speakProverb, isSpeaking } = useSpeakProverb();
-  const { speakSentence } = useTTS();
+  const { speakProverb, audioState, speakSentence, tts } = useSpeakProverb();
   const [questions, setQuestions] = useState<ProverbQuestion[]>([]);
   const [chosen, setChosen] = useState<string | null>(null);
   const { currentIndex, score, maxScore, totalQuestions, isComplete, recordAnswer, saveSession, reset } =
@@ -135,11 +135,10 @@ export default function FinishProverbPractice() {
                   <button
                     type="button"
                     onClick={playOpening}
-                    disabled={isSpeaking}
                     className="brutal-button bg-primary p-2 shrink-0 disabled:opacity-60"
                     aria-label="Listen to the opening"
                   >
-                    <Volume2 size={20} />
+                    <AudioStateIcon state={audioStateFor(current.proverb.igbo_first, tts)} size={20} />
                   </button>
                 </div>
 
@@ -184,10 +183,9 @@ export default function FinishProverbPractice() {
                       <button
                         type="button"
                         onClick={() => speakProverb(current.proverb)}
-                        disabled={isSpeaking}
                         className="brutal-button bg-card flex items-center gap-2 disabled:opacity-60"
                       >
-                        <Volume2 size={18} />
+                        <AudioStateIcon state={audioState(current.proverb)} />
                         Listen
                       </button>
                       <button type="button" onClick={handleNext} className="brutal-button bg-primary flex-1">

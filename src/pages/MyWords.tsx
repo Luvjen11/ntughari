@@ -100,7 +100,8 @@ export default function MyWords() {
     setPlayAllPlaying(true);
     for (const item of list) {
       await speakIgboWord(item.igbo, { recordedUrl: item.recordedUrl });
-      await new Promise((r) => setTimeout(r, 2500));
+      // speakIgboWord resolves when the word has finished playing; leave a short pause.
+      await new Promise((r) => setTimeout(r, 800));
     }
     setPlayAllPlaying(false);
   }, [sourceFilter, vocabRows, apiWordsDisplay, speakIgboWord]);
