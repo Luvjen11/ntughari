@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { AudioControls } from "@/components/admin/AudioControls";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ type Phrase = {
   english_translation: string;
   order_index: number;
   cultural_note: string | null;
+  audio_url: string | null;
 };
 
 export default function AdminPhrases() {
@@ -183,6 +185,7 @@ export default function AdminPhrases() {
                 <th className="text-left p-4 font-display">Igbo</th>
                 <th className="text-left p-4 font-display">English</th>
                 <th className="text-left p-4 font-display">Order</th>
+                <th className="text-left p-4 font-display">Audio</th>
                 <th className="text-right p-4 font-display">Actions</th>
               </tr>
             </thead>
@@ -192,6 +195,20 @@ export default function AdminPhrases() {
                   <td className="p-4 font-display font-semibold">{phrase.igbo_phrase}</td>
                   <td className="p-4 text-muted-foreground">{phrase.english_translation}</td>
                   <td className="p-4">{phrase.order_index}</td>
+                  <td className="p-2">
+                    <AudioControls
+                      text={phrase.igbo_phrase}
+                      kind="sentence"
+                      recordingUrl={phrase.audio_url}
+                      folder="phrases"
+                      itemId={phrase.id}
+                      onRecordingChange={async (url) => {
+                        const { error } = await supabase.from("phrases").update({ audio_url: url }).eq("id", phrase.id);
+                        if (error) throw error;
+                        await queryClient.invalidateQueries({ queryKey: ["adminPhrases"] });
+                      }}
+                    />
+                  </td>
                   <td className="p-4 text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(phrase)}><Pencil size={16} /></Button>
                     <AlertDialog>

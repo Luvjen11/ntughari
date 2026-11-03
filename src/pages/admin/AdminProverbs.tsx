@@ -27,7 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { PROVERB_THEMES, THEME_LABELS, themeLabel, type Proverb } from "@/lib/proverbs";
+import { PROVERB_THEMES, THEME_LABELS, proverbText, themeLabel, type Proverb } from "@/lib/proverbs";
+import { AudioControls } from "@/components/admin/AudioControls";
 
 const EMPTY_FORM = {
   igbo_first: "",
@@ -258,6 +259,7 @@ export default function AdminProverbs() {
                 <th className="text-left p-4 font-display">Proverb</th>
                 <th className="text-left p-4 font-display">Theme</th>
                 <th className="text-left p-4 font-display">Status</th>
+                <th className="text-left p-4 font-display">Audio</th>
                 <th className="text-right p-4 font-display">Actions</th>
               </tr>
             </thead>
@@ -275,6 +277,20 @@ export default function AdminProverbs() {
                       {p.reviewed ? "Reviewed" : "Needs review"}
                     </span>
                     {!p.is_published && <span className="block text-muted-foreground">Hidden</span>}
+                  </td>
+                  <td className="p-2">
+                    <AudioControls
+                      text={proverbText(p)}
+                      kind="sentence"
+                      recordingUrl={p.audio_url}
+                      folder="proverbs"
+                      itemId={p.id}
+                      onRecordingChange={async (url) => {
+                        const { error } = await supabase.from("proverbs").update({ audio_url: url }).eq("id", p.id);
+                        if (error) throw error;
+                        invalidate();
+                      }}
+                    />
                   </td>
                   <td className="p-4 text-right whitespace-nowrap">
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(p)} aria-label="Edit proverb"><Pencil size={16} /></Button>

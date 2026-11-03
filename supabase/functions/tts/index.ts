@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getSignedInUserId } from "../_shared/auth.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -121,6 +122,20 @@ async function writeCache(key: string, clip: Clip): Promise<void> {
   } catch (e) {
     console.warn("TTS cache write error:", e);
   }
+}
+
+/** Regenerating overwrites a stored clip and spends credits, so only admins may ask. */
+async function isAdmin(req: Request): Promise<boolean> {
+  const userId = await getSignedInUserId(req);
+  const cfg = storageConfig();
+  if (!userId || !cfg) return false;
+  const res = await fetch(
+    `${cfg.url}/rest/v1/user_roles?user_id=eq.${encodeURIComponent(userId)}&role=eq.admin&select=user_id`,
+    { headers: { Authorization: `Bearer ${cfg.serviceKey}`, apikey: cfg.serviceKey } }
+  );
+  if (!res.ok) return false;
+  const rows = (await res.json()) as unknown[];
+  return rows.length > 0;
 }
 
 // ---- Providers
@@ -251,7 +266,13 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
-    const { text, voice = "idera", responseFormat = "mp3" } = await req.json();
+    const { text, voice = "idera", responseFormat = "mp3", regenerate = false } = await req.json();
+
+    // Admin "Regenerate": skip stored clips and overwrite them with a fresh one.
+    if (regenerate === true && !(await isAdmin(req))) {
+      return jsonResponse({ error: "Only admins can regenerate audio" }, 403);
+    }
+    const useCache = regenerate !== true;
 
     if (!text || typeof text !== "string") {
       return jsonResponse({ error: "Text is required" }, 400);
@@ -281,7 +302,7 @@ serve(async (req: Request) => {
 
     // After switching back to YarnGPT (e.g. credits used up), audio already made
     // with ElevenLabs keeps being served.
-    if (!order.includes("elevenlabs") && elevenVoice) {
+    if (useCache && !order.includes("elevenlabs") && elevenVoice) {
       const cached = await readCache(await keys.elevenlabs);
       if (cached) return audioResponse(cached, "hit", "elevenlabs");
     }
@@ -290,7 +311,7 @@ serve(async (req: Request) => {
     // earlier never blocks generating the preferred ElevenLabs one.
     const attempts: { provider: TtsProvider; status: number; details: string }[] = [];
     for (const provider of order) {
-      const cached = await readCache(await keys[provider]);
+      const cached = useCache ? await readCache(await keys[provider]) : null;
       if (cached) return audioResponse(cached, "hit", provider);
 
       console.log(`Generating TTS (${provider}) for: "${safeText.slice(0, 80)}..."`);

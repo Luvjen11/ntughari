@@ -12,6 +12,7 @@ interface Phrase {
   english_translation: string;
   order_index: number;
   cultural_note: string | null;
+  audio_url?: string | null;
 }
 
 interface PhrasePart {
@@ -24,7 +25,7 @@ interface PhrasePart {
 }
 
 export default function Phrases() {
-  const { speakSentence } = useTTS();
+  const { speakSentence, speakIgboWord } = useTTS();
   const [selectedPhrase, setSelectedPhrase] = useState<Phrase | null>(null);
   const [rebuildMode, setRebuildMode] = useState(false);
   const [userOrder, setUserOrder] = useState<PhrasePart[]>([]);
@@ -185,7 +186,11 @@ export default function Phrases() {
                     </p>
                   </div>
                   <button
-                    onClick={() => speakSentence(selectedPhrase.igbo_phrase)}
+                    onClick={() =>
+                      selectedPhrase.audio_url
+                        ? speakIgboWord(selectedPhrase.igbo_phrase, { recordedUrl: selectedPhrase.audio_url })
+                        : speakSentence(selectedPhrase.igbo_phrase)
+                    }
                     className="brutal-button bg-primary flex items-center gap-2"
                   >
                     <Volume2 size={20} />

@@ -38,6 +38,17 @@ function rememberClip(key: string, url: string) {
   }
 }
 
+/** Drop a clip from this visit's memory (after an admin regenerates it), for every voice. */
+export function forgetClip(text: string) {
+  const trimmed = text.trim().normalize("NFC");
+  for (const [key, url] of clipUrls) {
+    if (key.endsWith(`\u0000${trimmed}`)) {
+      clipUrls.delete(key);
+      URL.revokeObjectURL(url);
+    }
+  }
+}
+
 /** Generated Igbo speech for `text` as an object URL, or null if no provider could make it. */
 async function fetchClipUrl(text: string, voice: YarnGPTVoice): Promise<string | null> {
   const trimmed = text.trim().normalize("NFC");

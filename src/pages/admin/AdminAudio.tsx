@@ -90,7 +90,7 @@ export default function AdminAudio() {
     letters: true,
     phrases: true,
     vocabExamples: true,
-    vocabWords: false,
+    vocabWords: true,
     letterExamples: false,
     stories: true,
   });

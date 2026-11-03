@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowUp, Keyboard, Loader2, Mic, Settings2, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUp, Keyboard, Loader2, Mic, PanelLeft, Settings2, Square, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { ChatHistory } from "@/components/practice/ChatHistory";
+import { useTutorChats, type SavedTutorMessage, type TutorChat } from "@/hooks/useTutorChats";
 import { IgboCharacterPad } from "@/components/practice/IgboCharacterPad";
 import { AudioStateIcon } from "@/components/AudioStateIcon";
 import { audioStateFor } from "@/lib/audioState";
@@ -56,6 +59,22 @@ const STARTERS = [
 
 const AUTO_SPEAK_KEY = "tutorAutoSpeak";
 const AUTO_SEND_KEY = "tutorAutoSend";
+const HISTORY_OPEN_KEY = "tutorHistoryOpen";
+
+/** A saved turn as the chat screen shows it. */
+function fromSaved(m: SavedTutorMessage): Message {
+  return m.role === "assistant"
+    ? {
+        role: "assistant",
+        text: m.text,
+        igbo: m.text,
+        english: m.english ?? undefined,
+        correction: m.correction,
+        correctionNote: m.correctionNote,
+        newWord: m.newWord,
+      }
+    : { role: "user", text: m.text };
+}
 
 function readFlag(key: string, fallback: boolean): boolean {
   try {
@@ -101,6 +120,12 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
   const [showCharPad, setShowCharPad] = useState(false);
   /** Set when the server answered with canned replies instead of the AI tutor */
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
+  /** The saved conversation this screen belongs to; null until the first reply is saved. */
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [openingChat, setOpeningChat] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(() => readFlag(HISTORY_OPEN_KEY, true));
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
+  const history = useTutorChats();
   const { ref: textareaRef, insert: insertCharacter } = useIgboInsert<HTMLTextAreaElement>(
     userInput,
     setUserInput
@@ -232,6 +257,25 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
 
         setMessages((prev) => [...prev, assistantMessage]);
         if (autoSpeak && assistantMessage.igbo) speakReply(assistantMessage.igbo);
+
+        // Save the turn (text only). A new conversation gets its row on its first reply.
+        if (history.signedIn) {
+          const id = chatId ?? (await history.createChat(userText, level));
+          if (id) {
+            if (!chatId) setChatId(id);
+            void history.saveMessages(id, [
+              { role: "user", text: userText },
+              {
+                role: "assistant",
+                text: assistantMessage.igbo ?? assistantMessage.text,
+                english: assistantMessage.english,
+                correction: assistantMessage.correction,
+                correctionNote: assistantMessage.correctionNote,
+                newWord: assistantMessage.newWord,
+              },
+            ]);
+          }
+        }
       } catch (error) {
         console.error("Conversation error:", error);
         toast.error("Couldn't reach the tutor. Try again.");
@@ -249,7 +293,7 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
         setLoading(false);
       }
     },
-    [userInput, loading, messages, level, clearTranscript, autoSpeak, speakReply]
+    [userInput, loading, messages, level, clearTranscript, autoSpeak, speakReply, history, chatId]
   );
 
   useEffect(() => {
@@ -278,11 +322,71 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
     }
   };
 
-  const clearChat = () => {
+  const newChat = () => {
     stopSpeaking();
     setMessages([GREETING]);
+    setChatId(null);
     setFallbackNotice(null);
+    setUserInput("");
+    setMobileHistoryOpen(false);
   };
+
+  const openChat = async (chat: TutorChat) => {
+    setMobileHistoryOpen(false);
+    if (chat.id === chatId) return;
+    stopSpeaking();
+    setOpeningChat(true);
+    try {
+      const saved = await history.loadMessages(chat.id);
+      setMessages([GREETING, ...saved.map(fromSaved)]);
+      setChatId(chat.id);
+      setFallbackNotice(null);
+      const savedLevel = chat.level as TutorLevel;
+      if (savedLevel !== level && LEVELS.some((l) => l.value === savedLevel)) onLevelChange(savedLevel);
+    } catch {
+      toast.error("Couldn't open that chat. Try again.");
+    } finally {
+      setOpeningChat(false);
+    }
+  };
+
+  const deleteChat = async (chat: TutorChat) => {
+    try {
+      await history.deleteChat(chat.id);
+      if (chat.id === chatId) newChat();
+    } catch {
+      toast.error("Couldn't delete that chat.");
+    }
+  };
+
+  /** Changing level starts a fresh conversation at that level; the current one stays saved. */
+  const changeLevel = (next: TutorLevel) => {
+    if (next === level) return;
+    onLevelChange(next);
+    newChat();
+  };
+
+  const toggleHistory = () => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      const next = !historyOpen;
+      setHistoryOpen(next);
+      writeFlag(HISTORY_OPEN_KEY, next);
+    } else {
+      setMobileHistoryOpen(true);
+    }
+  };
+
+  const historyPanel = (
+    <ChatHistory
+      signedIn={history.signedIn}
+      chats={history.chats}
+      loading={history.loadingChats}
+      activeChatId={chatId}
+      onNewChat={newChat}
+      onOpenChat={(chat) => void openChat(chat)}
+      onDeleteChat={(chat) => void deleteChat(chat)}
+    />
+  );
 
   const lastAssistantIgbo = [...messages].reverse().find((m) => m.role === "assistant")?.igbo ?? "";
   const orbState = loading
@@ -293,7 +397,7 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
   const freshChat = messages.length === 1;
 
   return (
-    <div className="relative flex flex-col h-full overflow-hidden bg-background">
+    <div className="relative flex h-full overflow-hidden bg-background">
       {/* Ambient glow */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[46rem] max-w-[140%] h-[26rem] rounded-full bg-primary/25 blur-[110px]" />
@@ -301,12 +405,34 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
         <div className="absolute -bottom-40 -left-32 w-[26rem] h-[20rem] rounded-full bg-primary/15 blur-[110px]" />
       </div>
 
+      {/* Past chats: a sidebar on wide screens, a drawer on phones */}
+      {historyOpen && (
+        <aside className="relative z-10 hidden lg:block w-72 shrink-0 border-r border-foreground/10 bg-background/50 backdrop-blur-md">
+          {historyPanel}
+        </aside>
+      )}
+      <Sheet open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
+        <SheetContent side="left" className="w-[85%] max-w-xs p-0 pt-10">
+          <SheetTitle className="sr-only">Your chats</SheetTitle>
+          {historyPanel}
+        </SheetContent>
+      </Sheet>
+
+      <div className="relative flex flex-1 min-w-0 flex-col">
       {/* Header */}
       <header className="relative z-10 border-b border-foreground/10 bg-background/60 backdrop-blur-md">
         <div className="mx-auto max-w-3xl px-4 h-14 flex items-center gap-3">
           <Link to="/practice" className="p-2 -ml-2 rounded-full hover:bg-muted" aria-label="Back to Practice Hub">
             <ArrowLeft size={18} />
           </Link>
+          <button
+            type="button"
+            onClick={toggleHistory}
+            className="p-2 rounded-full hover:bg-muted"
+            aria-label="Show or hide your chats"
+          >
+            <PanelLeft size={18} />
+          </button>
           <TutorOrb state={orbState} size={28} />
           <div className="min-w-0 flex-1">
             <p className="font-display font-bold leading-tight">Nkuzi · Igbo tutor</p>
@@ -320,7 +446,7 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
               <button
                 key={option.value}
                 type="button"
-                onClick={() => onLevelChange(option.value)}
+                onClick={() => changeLevel(option.value)}
                 aria-pressed={level === option.value}
                 className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
                   level === option.value ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -345,7 +471,7 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => onLevelChange(option.value)}
+                      onClick={() => changeLevel(option.value)}
                       aria-pressed={level === option.value}
                       className={`flex-1 px-2 py-1 rounded-full text-xs font-semibold ${
                         level === option.value ? "bg-background shadow-sm" : "text-muted-foreground"
@@ -391,7 +517,7 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
               </div>
               <button
                 type="button"
-                onClick={clearChat}
+                onClick={newChat}
                 className="w-full flex items-center justify-center gap-2 rounded-lg border border-foreground/15 py-2 text-sm hover:bg-muted"
               >
                 <Trash2 size={14} /> Start a new chat
@@ -404,6 +530,11 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
       {/* Messages */}
       <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
+          {openingChat && (
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin" /> Opening chat…
+            </p>
+          )}
           {fallbackNotice && (
             <p className="text-xs px-3 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200">
               {fallbackNotice}
@@ -579,6 +710,7 @@ export function AiConversation({ level, onLevelChange }: AiConversationProps) {
             The tutor can make mistakes with tone marks. Check new words with a fluent speaker.
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

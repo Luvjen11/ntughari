@@ -28,7 +28,7 @@ export default function ConversationPractice() {
   // Fills the screen below the 64px site header, like a chat app.
   return (
     <div className="h-[calc(100dvh-4rem)]">
-      <AiConversation key={level} level={level} onLevelChange={changeLevel} />
+      <AiConversation level={level} onLevelChange={changeLevel} />
     </div>
   );
 }

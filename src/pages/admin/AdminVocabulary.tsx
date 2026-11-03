@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { getWords, type IgboApiWord } from "@/lib/igboApi";
+import { AudioControls } from "@/components/admin/AudioControls";
 
 /** API may return definitions as string[] or as object[] (e.g. { wordClass, definitions, nsibidi }). Return a single string for display/import. */
 function firstDefinitionString(definitions: unknown): string {
@@ -390,6 +391,7 @@ export default function AdminVocabulary() {
                 <th className="text-left p-4 font-display">English</th>
                 <th className="text-left p-4 font-display">Category</th>
                 <th className="text-left p-4 font-display">Dialect</th>
+                <th className="text-left p-4 font-display">Audio</th>
                 <th className="text-right p-4 font-display">Actions</th>
               </tr>
             </thead>
@@ -400,6 +402,20 @@ export default function AdminVocabulary() {
                   <td className="p-4 text-muted-foreground">{word.english_translation}</td>
                   <td className="p-4">{getCategoryName(word.category_id)}</td>
                   <td className="p-4 text-muted-foreground text-sm">{word.dialect ?? "—"}</td>
+                  <td className="p-2">
+                    <AudioControls
+                      text={word.igbo_word}
+                      kind="word"
+                      recordingUrl={word.audio_url}
+                      folder="vocabulary"
+                      itemId={word.id}
+                      onRecordingChange={async (url) => {
+                        const { error } = await supabase.from("vocabulary").update({ audio_url: url }).eq("id", word.id);
+                        if (error) throw error;
+                        await queryClient.invalidateQueries({ queryKey: ["adminVocabulary"] });
+                      }}
+                    />
+                  </td>
                   <td className="p-4 text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(word)}><Pencil size={16} /></Button>
                     <AlertDialog>
