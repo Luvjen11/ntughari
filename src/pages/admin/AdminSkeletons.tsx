@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { IgboFocusPad } from "@/components/IgboFocusPad";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -39,6 +40,7 @@ type Skeleton = {
 };
 
 export default function AdminSkeletons() {
+  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -161,7 +163,8 @@ export default function AdminSkeletons() {
             <DialogHeader>
               <DialogTitle className="font-display">{editingSkeleton ? "Edit Skeleton" : "Add Skeleton"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+              <IgboFocusPad containerRef={formRef} />
               <div>
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="border-2 border-foreground" />

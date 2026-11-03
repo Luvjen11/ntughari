@@ -23,7 +23,9 @@ export function OnboardingBanner({ introStoryId }: OnboardingBannerProps) {
   const handleDismiss = () => {
     try {
       localStorage.setItem(ONBOARDING_DISMISSED_KEY, "true");
-    } catch {}
+    } catch {
+      // storage blocked (private mode) — banner just reappears next visit
+    }
     setDismissed(true);
   };
 

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       letter_examples: {
         Row: {
+          audio_url: string | null
           created_at: string
           english_translation: string
           id: string
@@ -23,6 +24,7 @@ export type Database = {
           letter_id: string
         }
         Insert: {
+          audio_url?: string | null
           created_at?: string
           english_translation: string
           id?: string
@@ -30,6 +32,7 @@ export type Database = {
           letter_id: string
         }
         Update: {
+          audio_url?: string | null
           created_at?: string
           english_translation?: string
           id?: string
@@ -110,6 +113,7 @@ export type Database = {
       }
       phrases: {
         Row: {
+          audio_url: string | null
           created_at: string
           cultural_note: string | null
           english_translation: string
@@ -118,6 +122,7 @@ export type Database = {
           order_index: number
         }
         Insert: {
+          audio_url?: string | null
           created_at?: string
           cultural_note?: string | null
           english_translation: string
@@ -126,6 +131,7 @@ export type Database = {
           order_index?: number
         }
         Update: {
+          audio_url?: string | null
           created_at?: string
           cultural_note?: string | null
           english_translation?: string
@@ -440,33 +446,21 @@ export type Database = {
       user_saved_words: {
         Row: {
           created_at: string
-          english_gloss: string | null
           id: string
-          igbo_api_word_id: string
-          igbo_word: string | null
-          pronunciation: string | null
           user_id: string
-          word_class: string | null
+          word_id: string
         }
         Insert: {
           created_at?: string
-          english_gloss?: string | null
           id?: string
-          igbo_api_word_id: string
-          igbo_word?: string | null
-          pronunciation?: string | null
           user_id: string
-          word_class?: string | null
+          word_id: string
         }
         Update: {
           created_at?: string
-          english_gloss?: string | null
           id?: string
-          igbo_api_word_id?: string
-          igbo_word?: string | null
-          pronunciation?: string | null
           user_id?: string
-          word_class?: string | null
+          word_id?: string
         }
         Relationships: [
           {
@@ -507,6 +501,7 @@ export type Database = {
       }
       vocabulary: {
         Row: {
+          audio_url: string | null
           category_id: string
           created_at: string
           cultural_note: string | null
@@ -518,6 +513,7 @@ export type Database = {
           igbo_word: string
         }
         Insert: {
+          audio_url?: string | null
           category_id: string
           created_at?: string
           cultural_note?: string | null
@@ -529,6 +525,7 @@ export type Database = {
           igbo_word: string
         }
         Update: {
+          audio_url?: string | null
           category_id?: string
           created_at?: string
           cultural_note?: string | null

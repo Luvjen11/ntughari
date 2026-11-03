@@ -1,10 +1,27 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { AiConversation } from "@/components/practice/AiConversation";
 
+type Level = "beginner" | "intermediate" | "advanced";
+
+const LEVELS: { value: Level; label: string }[] = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+];
+
 export default function ConversationPractice() {
   const navigate = useNavigate();
+  const [level, setLevel] = useState<Level>(
+    () => (localStorage.getItem("tutorLevel") as Level) || "beginner"
+  );
+
+  const changeLevel = (next: Level) => {
+    setLevel(next);
+    localStorage.setItem("tutorLevel", next);
+  };
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -19,7 +36,22 @@ export default function ConversationPractice() {
           Chat with your Igbo tutor in text or voice. Replies are spoken with YarnGPT when available.
         </p>
 
-        <AiConversation level="beginner" />
+        <div className="flex gap-2 mb-4">
+          {LEVELS.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={level === option.value ? "default" : "outline"}
+              onClick={() => changeLevel(option.value)}
+              className="border-2"
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
+
+        <AiConversation key={level} level={level} />
       </div>
     </div>
   );

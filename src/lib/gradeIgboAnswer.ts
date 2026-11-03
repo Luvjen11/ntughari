@@ -44,6 +44,8 @@ function stripIgboDiacritics(text: string): string {
   return [...text.normalize("NFC")]
     .map((char) => DIACRITIC_MAP[char] ?? char)
     .join("")
+    // combining tone marks (e.g. ị́ typed as ị + U+0301 has no precomposed form)
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
 }
 

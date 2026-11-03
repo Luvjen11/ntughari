@@ -26,7 +26,7 @@ function firstDef(w: IgboApiWord): string {
 
 type SourceFilter = "all" | "vocabulary" | "dictionary";
 
-interface VocabRow extends VocabRowWithOptionalAudio {}
+type VocabRow = VocabRowWithOptionalAudio;
 
 export default function MyWords() {
   const {

@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Mic, MicOff, Trash2, Volume2 } from "lucide-react";
+import { Keyboard, Loader2, Mic, MicOff, Trash2, Volume2 } from "lucide-react";
+import { IgboCharacterPad } from "@/components/practice/IgboCharacterPad";
+import { useIgboInsert } from "@/hooks/useIgboInsert";
 import { useTTS } from "@/hooks/useTTS";
 import { useSpeechCapture } from "@/hooks/useSpeechCapture";
-import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
+import { userFunctionAuthHeaders } from "@/lib/supabaseFunctions";
 import { DEFAULT_YARNGPT_VOICE } from "@/lib/ttsConstants";
 import { toast } from "sonner";
 
@@ -15,6 +17,11 @@ interface Message {
   text: string;
   igbo?: string;
   english?: string;
+  correction?: string | null;
+  correctionNote?: string | null;
+  newWord?: { igbo: string; english: string } | null;
+  /** Local error/notice bubbles are never sent back to the tutor as history */
+  isLocal?: boolean;
 }
 
 interface AiConversationProps {
@@ -33,6 +40,13 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
   const [userInput, setUserInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
+  const [showCharPad, setShowCharPad] = useState(false);
+  /** Set when the server answered with canned replies instead of the AI tutor */
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
+  const { ref: textareaRef, insert: insertCharacter } = useIgboInsert<HTMLTextAreaElement>(
+    userInput,
+    setUserInput
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastSpokenRef = useRef<string | null>(null);
   const wasRecordingRef = useRef(false);
@@ -87,16 +101,35 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
       try {
         const response = await fetch(`${supabaseUrl}/functions/v1/ai-tutor`, {
           method: "POST",
-          headers: supabaseFunctionHeaders(),
+          headers: await userFunctionAuthHeaders(true),
           body: JSON.stringify({
             userText,
-            conversationHistory: [...messages, userMessage].slice(-10).map((m) => ({
-              role: m.role,
-              content: m.text,
-            })),
+            // Prior turns only — the server appends userText itself. Send the clean
+            // Igbo reply (not the raw formatted blob) as assistant history.
+            conversationHistory: messages
+              .filter((m) => !m.isLocal)
+              .slice(-16)
+              .map((m) => ({
+                role: m.role,
+                content: m.role === "assistant" ? (m.igbo ?? m.text) : m.text,
+              })),
             level,
           }),
         });
+
+        if (response.status === 401) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              text: "Biko, banye n'akaụntụ gị ka anyị kparịta ụka.",
+              igbo: "Biko, banye n'akaụntụ gị ka anyị kparịta ụka.",
+              english: "Please sign in to your account so we can chat.",
+              isLocal: true,
+            },
+          ]);
+          return;
+        }
 
         if (!response.ok) {
           const errBody = await response.text();
@@ -107,16 +140,29 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
           reply?: string;
           explanation?: string;
           fullReply?: string;
+          correction?: string | null;
+          correctionNote?: string | null;
+          newWord?: { igbo: string; english: string } | null;
+          source?: string;
         };
+
+        setFallbackNotice(
+          data.source && data.source !== "ai"
+            ? "The AI tutor is unavailable right now, so you're getting simple practice replies."
+            : null
+        );
 
         const igbo = data.reply?.trim() ?? "";
         const english = data.explanation?.trim() ?? "";
 
         const assistantMessage: Message = {
           role: "assistant",
-          text: data.fullReply ?? igbo,
+          text: igbo || (data.fullReply ?? ""),
           igbo: igbo || data.fullReply,
           english,
+          correction: data.correction ?? null,
+          correctionNote: data.correctionNote ?? null,
+          newWord: data.newWord ?? null,
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
@@ -129,9 +175,10 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
         toast.error("Couldn't reach the tutor. Try again.");
         const errorMessage: Message = {
           role: "assistant",
-          text: "Ntụrụndụ! E nwere nsogbu. Gbalịa ọzọ.",
-          igbo: "Ntụrụndụ! E nwere nsogbu. Gbalịa ọzọ.",
+          text: "Ndo! E nwere nsogbu. Gbalịa ọzọ.",
+          igbo: "Ndo! E nwere nsogbu. Gbalịa ọzọ.",
           english: "Sorry! Something went wrong. Try again.",
+          isLocal: true,
         };
         setMessages((prev) => [...prev, errorMessage]);
       } finally {
@@ -172,6 +219,11 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
       <CardHeader className="pb-3 border-b-2 border-foreground/10">
         <CardTitle className="font-display text-xl">Igbo Conversation Tutor</CardTitle>
         <p className="text-sm text-muted-foreground">Level: {level}</p>
+        {fallbackNotice && (
+          <p className="text-xs mt-1 px-2 py-1 rounded border border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200">
+            {fallbackNotice}
+          </p>
+        )}
       </CardHeader>
 
       <CardContent className="flex flex-col flex-1 min-h-0 p-4 gap-3">
@@ -193,6 +245,23 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
                     <p className="font-semibold text-lg mb-1">{message.igbo ?? message.text}</p>
                     {message.english && (
                       <p className="text-sm text-muted-foreground">{message.english}</p>
+                    )}
+                    {message.correction && (
+                      <div className="mt-2 p-2 rounded border border-amber-500/50 bg-amber-500/10">
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-0.5">
+                          ✏️ Better: <span className="font-medium">{message.correction}</span>
+                        </p>
+                        {message.correctionNote && (
+                          <p className="text-xs text-muted-foreground">{message.correctionNote}</p>
+                        )}
+                      </div>
+                    )}
+                    {message.newWord?.igbo && (
+                      <p className="mt-2 text-xs">
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
+                          New word: {message.newWord.igbo} — {message.newWord.english}
+                        </span>
+                      </p>
                     )}
                     {message.igbo && index === messages.length - 1 && (
                       <Button
@@ -255,6 +324,17 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={showCharPad ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowCharPad((v) => !v)}
+                className="border-2"
+                title="Igbo characters"
+              >
+                <Keyboard className="h-4 w-4 mr-1" />
+                ị ọ ṅ
+              </Button>
               <Switch id="auto-send" checked={autoSend} onCheckedChange={setAutoSend} />
               <Label htmlFor="auto-send" className="text-xs cursor-pointer">
                 Auto-send
@@ -264,7 +344,12 @@ export function AiConversation({ level = "beginner" }: AiConversationProps) {
 
           {captureError && <p className="text-xs text-muted-foreground">{captureError}</p>}
 
+          {showCharPad && (
+            <IgboCharacterPad onCharacterClick={insertCharacter} disabled={loading} compact />
+          )}
+
           <textarea
+            ref={textareaRef}
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={handleKeyDown}

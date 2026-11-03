@@ -73,7 +73,8 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
       }
       const { data, error } = await query;
       if (error) throw error;
-      return data as PracticeVocabWord[];
+      // selectFields is chosen at runtime, so the typed query parser can't infer rows
+      return data as unknown as PracticeVocabWord[];
     },
     enabled: source === "all",
   });
@@ -88,7 +89,8 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
       }
       const { data, error } = await query;
       if (error) throw error;
-      return data as PracticeVocabWord[];
+      // selectFields is chosen at runtime, so the typed query parser can't infer rows
+      return data as unknown as PracticeVocabWord[];
     },
     enabled: source === "category" && !!categoryId,
   });
@@ -103,7 +105,8 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
       }
       const { data, error } = await query;
       if (error) throw error;
-      return data as PracticeVocabWord[];
+      // selectFields is chosen at runtime, so the typed query parser can't infer rows
+      return data as unknown as PracticeVocabWord[];
     },
     enabled: source === "my-words" && savedWords.length > 0,
   });
@@ -123,7 +126,7 @@ export function usePracticeVocabulary(options: UsePracticeVocabularyOptions = {}
   const vocabulary = useMemo(() => {
     if (source === "my-words") {
       const freshById = new Map((apiWords ?? []).map((w) => [w.id, w]));
-      const fromApi = savedApiWordIds.map((id) => {
+      const fromApi = savedApiWordIds.map((id): PracticeVocabWord | null => {
         const w = freshById.get(id) ?? (savedApiSnapshots[id]
           ? snapshotToDisplayWord(id, savedApiSnapshots[id])
           : null);
