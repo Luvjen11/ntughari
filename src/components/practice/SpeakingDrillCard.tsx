@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, Loader2, Mic, MicOff, Sparkles, Volume2, X } from "lucide-react";
 import type { SentenceGradeResult } from "@/lib/gradeIgboSentence";
+import { IgboCharacterPad } from "./IgboCharacterPad";
+import { useIgboInsert } from "@/hooks/useIgboInsert";
 import { useSpeechCapture } from "@/hooks/useSpeechCapture";
 import { useSpeakingFeedback } from "@/hooks/useSpeakingFeedback";
 import { useTTS } from "@/hooks/useTTS";
@@ -54,6 +56,10 @@ export function SpeakingDrillCard({
   } = useSpeechCapture();
 
   const isGrading = speakingFeedback.isPending;
+  const { ref: transcriptRef, insert: insertCharacter } = useIgboInsert<HTMLTextAreaElement>(
+    transcript,
+    setTranscript
+  );
 
   const handleSubmit = async () => {
     if (transcript.trim()) {
@@ -184,10 +190,12 @@ export function SpeakingDrillCard({
             <div className="rounded-lg border-2 border-foreground/20 bg-muted p-3 space-y-2">
               <p className="text-xs text-muted-foreground">What we heard — fix any mistakes before checking:</p>
               <Textarea
+                ref={transcriptRef}
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 className="min-h-[72px] border-2 bg-background"
               />
+              <IgboCharacterPad onCharacterClick={insertCharacter} compact />
             </div>
           )}
 

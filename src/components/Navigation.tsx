@@ -10,6 +10,8 @@ const navLinks = [
   { to: "/practice", label: "Practice", icon: Brain, matchPrefix: true },
   { to: "/skeletons", label: "Skeletons" },
   { to: "/phrases", label: "Phrases" },
+  { to: "/proverbs", label: "Proverbs" },
+  { to: "/dialects", label: "Map" },
 ];
 
 function isNavActive(pathname: string, to: string, matchPrefix?: boolean) {

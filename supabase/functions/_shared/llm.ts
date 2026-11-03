@@ -24,8 +24,14 @@ export type ChatCompletionResult =
   | { ok: true; text: string; provider: LlmProvider; model: string }
   | { ok: false; error: string; status?: number };
 
-const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
+// claude-3-5-haiku-20241022 was retired 2026-02-19; override with LLM_MODEL (e.g. claude-sonnet-5-5 for richer Igbo).
+const DEFAULT_ANTHROPIC_MODEL = "claude-haiku-5-5";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+
+/** Older Claude models reject output_config.effort; current ones accept it. */
+function supportsEffort(model: string): boolean {
+  return !/claude-3|haiku-4-5|sonnet-4-5|sonnet-4-0|opus-4-0|opus-4-1/.test(model);
+}
 
 function isAnthropicKey(key: string): boolean {
   return key.startsWith("sk-ant-");
@@ -106,6 +112,26 @@ async function chatAnthropic(
       ? `${opts.system}\n\nRespond with ONLY valid JSON. No markdown fences.`
       : opts.system;
 
+  // Claude requires the first message to be from the user.
+  const firstUser = opts.messages.findIndex((m) => m.role === "user");
+  if (firstUser === -1) {
+    return { ok: false, error: "No user message to send" };
+  }
+  const messages = opts.messages.slice(firstUser);
+
+  // No temperature: current Claude models reject non-default sampling params.
+  // Thinking is on by default and counts toward max_tokens, so leave headroom
+  // and keep effort low for quick conversational replies.
+  const body: Record<string, unknown> = {
+    model: config.model,
+    max_tokens: Math.max(opts.maxTokens ?? 400, 2000),
+    system,
+    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+  };
+  if (supportsEffort(config.model)) {
+    body.output_config = { effort: "low" };
+  }
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -113,16 +139,7 @@ async function chatAnthropic(
       "anthropic-version": "2023-06-01",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: config.model,
-      max_tokens: opts.maxTokens ?? 400,
-      temperature: opts.temperature ?? 0.5,
-      system,
-      messages: opts.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -131,9 +148,15 @@ async function chatAnthropic(
   }
 
   const data = await response.json();
+  if (data.stop_reason === "refusal") {
+    return { ok: false, error: "Model declined the request" };
+  }
   const text =
     data.content?.find((block: { type: string; text?: string }) => block.type === "text")?.text ??
     "";
+  if (!text.trim()) {
+    return { ok: false, error: `Empty reply (stop_reason: ${data.stop_reason})` };
+  }
 
   return {
     ok: true,

@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Check, Sparkles, X } from "lucide-react";
 import { IgboCharacterPad } from "./IgboCharacterPad";
+import { useIgboInsert } from "@/hooks/useIgboInsert";
 import { gradeIgboAnswer, type IgboGradeResult } from "@/lib/gradeIgboAnswer";
 
 interface PracticeCardProps {
@@ -32,7 +33,10 @@ export function PracticeCard({
   const [submitted, setSubmitted] = useState(false);
   const [grade, setGrade] = useState<IgboGradeResult | null>(null);
   const [isExactMatch, setIsExactMatch] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { ref: inputRef, insert: insertCharacter } = useIgboInsert<HTMLInputElement>(
+    userAnswer,
+    setUserAnswer
+  );
 
   const handleSubmit = () => {
     if (graded) {
@@ -57,23 +61,6 @@ export function PracticeCard({
     setSubmitted(false);
     setGrade(null);
     setIsExactMatch(false);
-  };
-
-  const insertCharacter = (char: string) => {
-    const input = inputRef.current;
-    if (!input) return;
-
-    const start = input.selectionStart ?? userAnswer.length;
-    const end = input.selectionEnd ?? userAnswer.length;
-    const newValue = userAnswer.slice(0, start) + char + userAnswer.slice(end);
-
-    setUserAnswer(newValue);
-
-    setTimeout(() => {
-      input.focus();
-      const newPos = start + char.length;
-      input.setSelectionRange(newPos, newPos);
-    }, 0);
   };
 
   const feedbackStyles = isExactMatch

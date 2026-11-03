@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { supabaseFunctionAuthHeaders } from "@/lib/supabaseFunctions";
+import { userFunctionAuthHeaders } from "@/lib/supabaseFunctions";
 
 type SpeechRecognitionResult = {
   isFinal: boolean;
@@ -33,24 +33,23 @@ function getSpeechRecognition(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-/** Prefer Igbo-specialized server ASR; fall back to browser only when server fails. */
-function pickBestTranscript(browser: string, server: string): string {
-  const b = browser.trim();
-  const s = server.trim();
-  if (s && b) {
-    // Server ASR (Whisper / Igbo API) is more reliable for Igbo than browser STT.
-    if (s.length >= b.length * 0.6) return s;
-    // Browser caught noticeably more — merge if server missed the start or end
-    if (b.length > s.length * 1.4) {
-      const bLower = b.toLowerCase();
-      const sLower = s.toLowerCase();
-      if (bLower.includes(sLower)) return b;
-      if (sLower.includes(bLower)) return s;
-      return `${s} ${b}`.trim();
-    }
-    return s;
-  }
-  return s || b;
+// Ordered by preference; iOS Safari only records audio/mp4.
+const RECORDER_MIME_TYPES = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/mp4",
+  "audio/ogg;codecs=opus",
+];
+
+function pickRecorderMimeType(): string | undefined {
+  if (typeof MediaRecorder.isTypeSupported !== "function") return undefined;
+  return RECORDER_MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
+}
+
+function fileNameForMimeType(mimeType: string): string {
+  if (mimeType.includes("mp4")) return "recording.m4a";
+  if (mimeType.includes("ogg")) return "recording.ogg";
+  return "recording.webm";
 }
 
 export function useSpeechCapture() {
@@ -68,20 +67,24 @@ export function useSpeechCapture() {
   const streamRef = useRef<MediaStream | null>(null);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const signInRequiredRef = useRef(false);
+
   const transcribeWithServer = useCallback(async (audioBlob: Blob): Promise<string | null> => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    signInRequiredRef.current = false;
     if (!supabaseUrl || audioBlob.size === 0) return null;
 
     try {
       const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.webm");
+      formData.append("audio", audioBlob, fileNameForMimeType(audioBlob.type));
 
       const response = await fetch(`${supabaseUrl}/functions/v1/asr`, {
         method: "POST",
-        headers: supabaseFunctionAuthHeaders(),
+        headers: await userFunctionAuthHeaders(),
         body: formData,
       });
 
+      if (response.status === 401) signInRequiredRef.current = true;
       if (!response.ok) return null;
       const data = (await response.json()) as { text?: string };
       return data.text?.trim() ?? null;
@@ -186,6 +189,11 @@ export function useSpeechCapture() {
     transcriptRef.current = "";
     finalPartsRef.current = [];
 
+    if (typeof MediaRecorder === "undefined") {
+      setError("Voice recording isn't supported in this browser. Try Chrome, or type your answer instead.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -197,11 +205,11 @@ export function useSpeechCapture() {
       streamRef.current = stream;
       chunksRef.current = [];
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      // Let the browser pick its default when none of our preferred types are supported (older iOS).
+      const mimeType = pickRecorderMimeType();
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -216,22 +224,26 @@ export function useSpeechCapture() {
         stopRecognition();
 
         const browserText = buildTranscriptFromParts().trim();
-        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+        const blobType = mediaRecorder.mimeType || mimeType || "audio/webm";
+        const audioBlob = new Blob(chunksRef.current, { type: blobType });
         chunksRef.current = [];
 
         setIsTranscribing(true);
-        const serverText = audioBlob.size > 0 ? (await transcribeWithServer(audioBlob)) ?? "" : "";
+        const serverText = audioBlob.size > 0 ? ((await transcribeWithServer(audioBlob)) ?? "").trim() : "";
         setIsTranscribing(false);
 
-        const text = pickBestTranscript(browserText, serverText);
+        // Server ASR is the source of truth for Igbo; the browser transcript is a
+        // live preview only and is never merged in (browser STT has no real Igbo
+        // support and produces garbled English guesses).
+        const text = serverText || browserText;
 
+        if (signInRequiredRef.current) {
+          setError("Sign in to use Igbo voice transcription — browser preview only for now.");
+        }
         if (text) {
           setTranscript(text);
           transcriptRef.current = text;
-        } else if (browserText) {
-          setTranscript(browserText);
-          transcriptRef.current = browserText;
-        } else {
+        } else if (!signInRequiredRef.current) {
           setError(
             "Couldn't hear you clearly. Speak your full sentence, tap Stop, then try again in a quiet space."
           );

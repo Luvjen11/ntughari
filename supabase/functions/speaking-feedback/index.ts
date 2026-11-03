@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { chatCompletion, hasLlmProvider } from "../_shared/llm.ts";
+import { getSignedInUserId } from "../_shared/auth.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -160,6 +161,10 @@ serve(async (req: Request) => {
   try {
     if (req.method !== "POST") {
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    if (!(await getSignedInUserId(req))) {
+      return jsonResponse({ error: "Sign in to use this feature", code: "auth_required" }, 401);
     }
 
     const body = await req.json();

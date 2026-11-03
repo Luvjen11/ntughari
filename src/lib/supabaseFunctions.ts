@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 /** Auth headers for Supabase Edge Functions from the browser */
 export function supabaseFunctionAuthHeaders(): Record<string, string> {
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -13,6 +15,17 @@ export function supabaseFunctionHeaders(): Record<string, string> {
     ...supabaseFunctionAuthHeaders(),
     "Content-Type": "application/json",
   };
+}
+
+/**
+ * Like supabaseFunctionAuthHeaders, but sends the signed-in user's session token.
+ * Required for paid functions (ai-tutor, speaking-feedback, asr), which reject the public key.
+ */
+export async function userFunctionAuthHeaders(json = false): Promise<Record<string, string>> {
+  const headers = json ? supabaseFunctionHeaders() : supabaseFunctionAuthHeaders();
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
 }
 
 /** Vocabulary columns safe before/after audio_url migration (select * omits unknown cols) */

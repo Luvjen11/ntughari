@@ -5,6 +5,7 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Expose-Headers": "X-TTS-Cache, X-TTS-Provider",
 };
 
 function jsonResponse(body: unknown, status: number) {
@@ -12,6 +13,116 @@ function jsonResponse(body: unknown, status: number) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function audioResponse(audio: ArrayBuffer, cache: "hit" | "miss", provider: TtsProvider) {
+  return new Response(audio, {
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "audio/mpeg",
+      "Content-Disposition": 'inline; filename="igbo-audio.mp3"',
+      "Cache-Control": "public, max-age=86400",
+      "X-TTS-Cache": cache,
+      "X-TTS-Provider": provider,
+    },
+  });
+}
+
+type TtsProvider = "yarngpt" | "elevenlabs";
+
+function elevenLabsConfigured(): boolean {
+  return !!(Deno.env.get("ELEVENLABS_API_KEY") && Deno.env.get("ELEVENLABS_VOICE_ID"));
+}
+
+/**
+ * Providers to generate with, in order. TTS_PROVIDER=elevenlabs puts ElevenLabs
+ * first; YarnGPT always follows so playback keeps working when credits run out.
+ */
+function generationOrder(): TtsProvider[] {
+  const wantsEleven = Deno.env.get("TTS_PROVIDER")?.toLowerCase().trim() === "elevenlabs";
+  return wantsEleven && elevenLabsConfigured() ? ["elevenlabs", "yarngpt"] : ["yarngpt"];
+}
+
+// ---- Storage cache: each (provider, voice, model, text) is generated once, then served from the
+// private "tts-cache" bucket (see migration 20261103120000_tts_cache_bucket.sql).
+
+const CACHE_BUCKET = "tts-cache";
+
+async function cacheKey(parts: string[]): Promise<string> {
+  const bytes = new TextEncoder().encode(parts.join("\u0000"));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function storageConfig() {
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  return url && serviceKey ? { url, serviceKey } : null;
+}
+
+async function readCache(key: string): Promise<ArrayBuffer | null> {
+  const cfg = storageConfig();
+  if (!cfg) return null;
+  try {
+    const res = await fetch(`${cfg.url}/storage/v1/object/${CACHE_BUCKET}/${key}.mp3`, {
+      headers: { Authorization: `Bearer ${cfg.serviceKey}`, apikey: cfg.serviceKey },
+    });
+    if (!res.ok) return null;
+    return await res.arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(key: string, audio: ArrayBuffer): Promise<void> {
+  const cfg = storageConfig();
+  if (!cfg) return;
+  try {
+    const res = await fetch(`${cfg.url}/storage/v1/object/${CACHE_BUCKET}/${key}.mp3`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cfg.serviceKey}`,
+        apikey: cfg.serviceKey,
+        "Content-Type": "audio/mpeg",
+        "x-upsert": "true",
+      },
+      body: audio,
+    });
+    if (!res.ok) console.warn("TTS cache write failed:", res.status, await res.text());
+  } catch (e) {
+    console.warn("TTS cache write error:", e);
+  }
+}
+
+// ---- Providers
+
+type GenerateResult = { ok: true; audio: ArrayBuffer } | { ok: false; status: number; details: string };
+
+async function generateYarnGPT(text: string, voice: string, responseFormat: string): Promise<GenerateResult> {
+  const apiKey = Deno.env.get("YARNGPT_API_KEY");
+  if (!apiKey) return { ok: false, status: 500, details: "YARNGPT_API_KEY not set" };
+
+  const response = await fetch("https://yarngpt.ai/api/v1/tts", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice, response_format: responseFormat }),
+  });
+  if (!response.ok) return { ok: false, status: response.status, details: await response.text() };
+  return { ok: true, audio: await response.arrayBuffer() };
+}
+
+async function generateElevenLabs(text: string, voiceId: string, modelId: string): Promise<GenerateResult> {
+  const apiKey = Deno.env.get("ELEVENLABS_API_KEY")!;
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
+    {
+      method: "POST",
+      headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
+      body: JSON.stringify({ text, model_id: modelId }),
+    }
+  );
+  if (!response.ok) return { ok: false, status: response.status, details: await response.text() };
+  return { ok: true, audio: await response.arrayBuffer() };
 }
 
 serve(async (req: Request) => {
@@ -35,51 +146,53 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Text exceeds 2000 character limit" }, 400);
     }
 
-    const safeText = text.length > 500 ? text.slice(0, 500) : text;
-
-    const yarngptApiKey = Deno.env.get("YARNGPT_API_KEY");
-    if (!yarngptApiKey) {
-      console.error("YARNGPT_API_KEY not set in Supabase secrets");
-      return jsonResponse({ error: "TTS service not configured" }, 500);
-    }
+    const safeText = (text.length > 500 ? text.slice(0, 500) : text).trim().normalize("NFC");
 
     const allowedVoices = ["Chinenye", "Nonso", "Idera", "Adaora"];
-    const selectedVoice = allowedVoices.includes(voice) ? voice : "Idera";
+    const yarnVoice = allowedVoices.includes(voice) ? voice : "Idera";
 
-    console.log(`Generating TTS for: "${safeText.slice(0, 80)}..." with voice: ${selectedVoice}`);
+    const elevenVoice = Deno.env.get("ELEVENLABS_VOICE_ID") ?? "";
+    const elevenModel = Deno.env.get("ELEVENLABS_TTS_MODEL")?.trim() || "eleven_v3";
+    const keys: Record<TtsProvider, Promise<string>> = {
+      elevenlabs: cacheKey(["elevenlabs", elevenVoice, elevenModel, safeText]),
+      yarngpt: cacheKey(["yarngpt", yarnVoice, responseFormat, safeText]),
+    };
 
-    const response = await fetch("https://yarngpt.ai/api/v1/tts", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${yarngptApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: safeText,
-        voice: selectedVoice,
-        response_format: responseFormat,
-      }),
-    });
+    const order = generationOrder();
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("YarnGPT API error:", response.status, errorText);
-      return jsonResponse(
-        { error: "TTS generation failed", details: errorText, status: response.status },
-        response.status >= 400 && response.status < 600 ? response.status : 502
-      );
+    // After switching back to YarnGPT (e.g. credits used up), audio already made
+    // with ElevenLabs keeps being served.
+    if (!order.includes("elevenlabs") && elevenVoice) {
+      const cached = await readCache(await keys.elevenlabs);
+      if (cached) return audioResponse(cached, "hit", "elevenlabs");
     }
 
-    const audioBuffer = await response.arrayBuffer();
+    // Each provider in turn: its cached clip, else generate. A YarnGPT clip cached
+    // earlier never blocks generating the preferred ElevenLabs one.
+    let lastError: { provider: TtsProvider; status: number; details: string } | null = null;
+    for (const provider of order) {
+      const cached = await readCache(await keys[provider]);
+      if (cached) return audioResponse(cached, "hit", provider);
 
-    return new Response(audioBuffer, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "audio/mpeg",
-        "Content-Disposition": 'inline; filename="igbo-audio.mp3"',
-        "Cache-Control": "public, max-age=3600",
-      },
-    });
+      console.log(`Generating TTS (${provider}) for: "${safeText.slice(0, 80)}..."`);
+      const result =
+        provider === "elevenlabs"
+          ? await generateElevenLabs(safeText, elevenVoice, elevenModel)
+          : await generateYarnGPT(safeText, yarnVoice, responseFormat);
+
+      if (result.ok) {
+        await writeCache(await keys[provider], result.audio);
+        return audioResponse(result.audio, "miss", provider);
+      }
+      console.error(`${provider} TTS error:`, result.status, result.details);
+      lastError = { provider, status: result.status, details: result.details };
+    }
+
+    const status = lastError?.status ?? 502;
+    return jsonResponse(
+      { error: "TTS generation failed", provider: lastError?.provider, details: lastError?.details, status },
+      status >= 400 && status < 600 ? status : 502
+    );
   } catch (error) {
     console.error("TTS error:", error);
     return jsonResponse(

@@ -1,0 +1,277 @@
+<title>Ntụgharị Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+  /* Layout: one reading column; phases run down a ruled spine like the app's practice path. */
+  :root {
+    --bg: hsl(45 30% 96%);
+    --card: hsl(45 30% 99%);
+    --ink: hsl(220 20% 15%);
+    --muted: hsl(220 10% 42%);
+    --rule: hsl(220 20% 20%);
+    --blue: hsl(224 89% 74%);
+    --pink: hsl(300 91% 83%);
+    --soft: hsl(45 22% 90%);
+    --ok: hsl(150 45% 38%);
+    --ok-bg: hsl(150 50% 90%);
+    --warn: hsl(32 85% 38%);
+    --warn-bg: hsl(40 90% 88%);
+    --shadow: 4px 4px 0 var(--ink);
+    --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+    --body: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: hsl(220 20% 11%);
+      --card: hsl(220 20% 15%);
+      --ink: hsl(45 30% 95%);
+      --muted: hsl(45 15% 70%);
+      --rule: hsl(45 20% 78%);
+      --soft: hsl(220 15% 22%);
+      --ok: hsl(150 50% 65%);
+      --ok-bg: hsl(150 30% 20%);
+      --warn: hsl(40 90% 68%);
+      --warn-bg: hsl(35 40% 22%);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: hsl(220 20% 11%);
+    --card: hsl(220 20% 15%);
+    --ink: hsl(45 30% 95%);
+    --muted: hsl(45 15% 70%);
+    --rule: hsl(45 20% 78%);
+    --soft: hsl(220 15% 22%);
+    --ok: hsl(150 50% 65%);
+    --ok-bg: hsl(150 30% 20%);
+    --warn: hsl(40 90% 68%);
+    --warn-bg: hsl(35 40% 22%);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 48px; }
+
+  h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.02em; }
+  h2 { font-size: 1.5rem; font-weight: 700; }
+  h3 { font-size: 1.15rem; font-weight: 600; }
+  p { margin: 0; }
+  .eyebrow { font: 600 0.75rem/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .lede { font-size: 1.15rem; max-width: 60ch; }
+  .muted { color: var(--muted); }
+
+  header { display: grid; gap: 16px; }
+  .gloss { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 0.95rem; }
+  .gloss b { font-family: var(--display); font-weight: 600; background: var(--pink); color: hsl(220 20% 15%); padding: 2px 8px; border: 2px solid var(--rule); border-radius: 6px; }
+
+  section { display: grid; gap: 20px; }
+
+  .built { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 2px solid var(--rule); border-radius: 999px; padding: 4px 12px; font-size: 0.9rem; background: var(--card); }
+
+  /* Phase spine */
+  .phases { list-style: none; margin: 0; padding: 0; display: grid; gap: 24px; position: relative; }
+  .phases::before { content: ""; position: absolute; left: 19px; top: 8px; bottom: 8px; border-left: 3px dashed var(--rule); opacity: 0.35; }
+  .phase { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 16px; position: relative; }
+  .num {
+    width: 42px; height: 42px; border: 3px solid var(--rule); border-radius: 50%;
+    display: grid; place-items: center; font: 700 1.1rem/1 var(--display);
+    background: var(--card); z-index: 1;
+  }
+  .phase.active .num { background: var(--blue); color: hsl(220 20% 15%); }
+  .card {
+    background: var(--card); border: 2px solid var(--rule); border-radius: 10px;
+    padding: 20px; display: grid; gap: 12px; min-width: 0;
+  }
+  .phase.active .card { box-shadow: var(--shadow); }
+  .card-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+  .pill { font: 600 0.75rem/1 var(--display); letter-spacing: 0.04em; padding: 6px 10px; border-radius: 999px; border: 2px solid currentColor; white-space: nowrap; }
+  .pill.done { color: var(--ok); background: var(--ok-bg); }
+  .pill.test { color: var(--warn); background: var(--warn-bg); }
+  .pill.next { color: var(--ink); background: var(--blue); border-color: var(--rule); color: hsl(220 20% 15%); }
+  .pill.plan { color: var(--muted); background: transparent; }
+  .card ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+  .card li::marker { color: var(--muted); }
+  .igbo { font-family: var(--display); font-weight: 600; }
+  .note { font-size: 0.9rem; color: var(--muted); border-top: 2px solid var(--soft); padding-top: 10px; }
+
+  /* Dialect table */
+  .table-scroll { overflow-x: auto; border: 2px solid var(--rule); border-radius: 10px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--soft); vertical-align: top; }
+  th { font: 600 0.8rem/1.2 var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .rule { border: 2px solid var(--rule); border-radius: 10px; padding: 16px; display: grid; gap: 6px; background: var(--card); }
+
+  .help { background: var(--pink); color: hsl(220 20% 15%); border: 3px solid var(--rule); border-radius: 12px; padding: 24px; box-shadow: var(--shadow); display: grid; gap: 12px; }
+  .help ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+
+  footer { font-size: 0.85rem; color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) { .phase.active .num { transition: transform .2s; } .phase.active:hover .num { transform: rotate(-8deg); } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Roadmap · updated 4 November 2026</span>
+    <h1>Ntụgharị Roadmap</h1>
+    <p class="lede">Ntụgharị started as a bridge for heritage learners who understand Igbo but freeze when it is time to speak. The plan is to grow it into one place to learn the language, practise speaking it, and understand the people, places and history it comes from.</p>
+    <p class="gloss"><b>Ntụgharị</b><span class="muted">translation, transformation; “turning over” from one state to another</span></p>
+  </header>
+
+  <section aria-labelledby="built">
+    <h2 id="built">Already in the app</h2>
+    <div class="built">
+      <span class="chip">Alphabet &amp; sound map</span>
+      <span class="chip">Vocabulary by theme</span>
+      <span class="chip">Sentence skeletons</span>
+      <span class="chip">Phrases</span>
+      <span class="chip">Conversation tutor</span>
+      <span class="chip">Translation, fill-the-gap, phrase rebuild</span>
+      <span class="chip">Use this word (speaking drill)</span>
+      <span class="chip">Illustrated stories</span>
+      <span class="chip">My Words &amp; progress</span>
+      <span class="chip">Admin content editor</span>
+      <span class="chip">Proverbs &amp; finish-the-proverb</span>
+      <span class="chip">Dialect map</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="phases">
+    <h2 id="phases">Phases, in order</h2>
+    <p class="muted">Each phase builds on the one before it. Status shows where each one stands today.</p>
+    <ol class="phases">
+      <li class="phase active">
+        <span class="num" aria-hidden="true">1</span>
+        <div class="card">
+          <div class="card-head"><h3>Fix the foundations</h3><span class="pill done">Code done · deploy pending</span></div>
+          <ul>
+            <li>Tutor moved to a current AI model; it had been giving canned replies since its old model was retired.</li>
+            <li>Chat history fixed so the tutor sees the conversation correctly.</li>
+            <li>AI tutor, speaking feedback and voice transcription now need a free account, so the public can't run up the bill.</li>
+            <li>A visible notice when the tutor falls back to simple replies.</li>
+            <li>Corrected Igbo in the fallback phrases, fixed font loading and type errors.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="phase active">
+        <span class="num" aria-hidden="true">2</span>
+        <div class="card">
+          <div class="card-head"><h3>Voice: test ElevenLabs, cache audio</h3><span class="pill test">Ready to test</span></div>
+          <ul>
+            <li>ElevenLabs Scribe added to the speech-to-text chain, with a switch to compare providers on the same recording.</li>
+            <li>Every generated clip is saved once and replayed from storage, so each phrase is paid for one time.</li>
+            <li>An admin tool pre-generates audio for proverbs, phrases, example sentences and stories, so the ElevenLabs credits become permanent audio before they expire.</li>
+            <li>Next: compare voices on tone pairs such as <span class="igbo">ákwà</span> (cloth), <span class="igbo">àkwá</span> (egg), <span class="igbo">àkwà</span> (bed).</li>
+            <li>Goal: one warm, consistent narrator, ideally a native speaker's voice cloned with their consent.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="phase active">
+        <span class="num" aria-hidden="true">3</span>
+        <div class="card">
+          <div class="card-head"><h3>Proverbs · Ilu</h3><span class="pill done">Built · deploy pending</span></div>
+          <ul>
+            <li>A proverb of the day with its literal translation, its meaning, and when people use it.</li>
+            <li>Audio for every proverb, and a “finish the proverb” practice mode.</li>
+            <li>Grouped by theme: patience, family, community, wisdom, work.</li>
+            <li>13 well-known proverbs to start, each waiting for a fluent speaker to confirm it.</li>
+          </ul>
+          <p class="note">Cheap to build on the existing content editor and close to the heart of the app. In Chinua Achebe's words, proverbs are “the palm-oil with which words are eaten.”</p>
+        </div>
+      </li>
+      <li class="phase active">
+        <span class="num" aria-hidden="true">4</span>
+        <div class="card">
+          <div class="card-head"><h3>Map &amp; dialects</h3><span class="pill done">Built · needs speakers</span></div>
+          <ul>
+            <li>An interactive map of Igbo-speaking areas, from the core states out to parts of Delta and Rivers.</li>
+            <li>Standard Igbo (<span class="igbo">Igbo Izugbe</span>) stays the default; each word can carry its dialect variants, tied to a place on the map.</li>
+            <li>Tap a region to hear how a word or greeting changes there, and read about the towns, festivals and history linked to it.</li>
+            <li>The map and its 20 places are built. The words themselves will come from speakers from each place, with their recordings.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="phase">
+        <span class="num" aria-hidden="true">5</span>
+        <div class="card">
+          <div class="card-head"><h3>History</h3><span class="pill next">Next</span></div>
+          <ul>
+            <li>Nri, one of the oldest kingdoms in the region, and the Igbo-Ukwu bronzes of the 9th–10th centuries.</li>
+            <li>The Aro Confederacy and its trade networks.</li>
+            <li>Colonial rule and the 1929 Women's War (<span class="igbo">Ọgụ Ụmụnwaanyị</span>).</li>
+            <li>The Nigerian Civil War and Biafra, 1967–1970: survivors' accounts and historians' work, carefully sourced.</li>
+            <li>Igbo communities around the world today.</li>
+          </ul>
+          <p class="note">Each story links to places on the map and to the words it uses.</p>
+        </div>
+      </li>
+      <li class="phase">
+        <span class="num" aria-hidden="true">6</span>
+        <div class="card">
+          <div class="card-head"><h3>Music &amp; films</h3><span class="pill plan">Later</span></div>
+          <ul>
+            <li>Guides to listening, from highlife greats like Osita Osadebe and Oliver De Coque to today's artists such as Flavour and Phyno.</li>
+            <li>Films in Igbo and films about Igbo life, with where to watch them.</li>
+            <li>Vocabulary pulled from lyrics and scenes, so listening becomes practice.</li>
+          </ul>
+          <p class="note">We link to official sources and never host other people's music or films.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="dialects">
+    <h2 id="dialects">How dialects will be shown</h2>
+    <p>Learners start with Standard Igbo, so they can be understood everywhere. Dialect variants sit beside it, as part of the language's richness. The groupings below are a working starting point to refine with speakers from each area.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Area</th><th>Examples of speech communities</th><th>Shown as</th></tr></thead>
+        <tbody>
+          <tr><td>Anambra</td><td>Onitsha, Awka, Nnewi</td><td>Variant + audio</td></tr>
+          <tr><td>Imo</td><td>Owerri, Mbaise, Orlu</td><td>Variant + audio</td></tr>
+          <tr><td>Enugu</td><td>Nsukka, Udi, Enugu</td><td>Variant + audio</td></tr>
+          <tr><td>Abia</td><td>Ngwa, Bende, Ohafia</td><td>Variant + audio</td></tr>
+          <tr><td>Ebonyi</td><td>Afikpo, Izzi, Ezza</td><td>Variant + audio</td></tr>
+          <tr><td>Delta &amp; Rivers</td><td>Ika, Enuani, Ndokwa; Ikwerre, Ekpeye</td><td>Variant + audio, with community notes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Some communities in Delta and Rivers speak closely related languages and do not all identify as Igbo. The map will say so plainly rather than draw one border around everyone.</p>
+  </section>
+
+  <section aria-labelledby="principles">
+    <h2 id="principles">How we build it</h2>
+    <div class="rules">
+      <div class="rule"><h3>Native speakers check the Igbo</h3><p class="muted">Every fixed phrase, proverb and audio clip is reviewed by a fluent speaker before it ships.</p></div>
+      <div class="rule"><h3>Sources are cited</h3><p class="muted">History and culture pages name where their facts come from, and credit the collections we draw on.</p></div>
+      <div class="rule"><h3>Shame-free by design</h3><p class="muted">Corrections model the right form gently. Speaking practice never mocks a learner.</p></div>
+      <div class="rule"><h3>Hard history handled with care</h3><p class="muted">Biafra is still painful for many families. We give context and many voices, and stay out of present-day politics.</p></div>
+      <div class="rule"><h3>Voices used with consent</h3><p class="muted">Any cloned or recorded voice comes from someone who agreed to it and is credited.</p></div>
+      <div class="rule"><h3>One content system</h3><p class="muted">Proverbs, songs, films and history share one flexible content type, so new sections don't need a rebuild.</p></div>
+    </div>
+  </section>
+
+  <section class="help" aria-labelledby="help">
+    <h2 id="help">Where help would make the biggest difference</h2>
+    <ul>
+      <li>Fluent speakers to review phrases and record audio.</li>
+      <li>Speakers from different areas to supply dialect words and greetings.</li>
+      <li>Historians, teachers and elders to shape the history pages.</li>
+      <li>Collectors of proverbs, songs and family stories.</li>
+    </ul>
+  </section>
+
+  <footer>Ntụgharị · a learning home for Igbo language and culture</footer>
+</div>

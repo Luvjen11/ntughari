@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { IgboFocusPad } from "@/components/IgboFocusPad";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -61,6 +62,7 @@ type Category = {
 export default function AdminVocabulary() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const formRef = useRef<HTMLFormElement>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<VocabWord | null>(null);
   const [formData, setFormData] = useState({
@@ -261,7 +263,8 @@ export default function AdminVocabulary() {
             <DialogHeader>
               <DialogTitle className="font-display">{editingWord ? "Edit Word" : "Add Word"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+              <IgboFocusPad containerRef={formRef} />
               <div>
                 <Label htmlFor="igbo_word">Igbo Word</Label>
                 <Input id="igbo_word" value={formData.igbo_word} onChange={(e) => setFormData({ ...formData, igbo_word: e.target.value })} required className="border-2 border-foreground" />

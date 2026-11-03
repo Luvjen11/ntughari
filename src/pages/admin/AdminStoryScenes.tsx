@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { IgboFocusPad } from "@/components/IgboFocusPad";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,7 @@ interface Vocab {
 }
 
 export default function AdminStoryScenes() {
+  const formRef = useRef<HTMLFormElement>(null);
   const { storyId } = useParams<{ storyId: string }>();
   const queryClient = useQueryClient();
   const { speakNarration, stop, isSpeaking } = useTTS();
@@ -287,7 +289,8 @@ export default function AdminStoryScenes() {
                 {editingScene ? "Edit Scene" : "Create Scene"}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+              <IgboFocusPad containerRef={formRef} />
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input

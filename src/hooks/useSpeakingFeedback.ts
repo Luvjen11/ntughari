@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { supabaseFunctionHeaders } from "@/lib/supabaseFunctions";
+import { userFunctionAuthHeaders } from "@/lib/supabaseFunctions";
 import type { SentenceGradeResult } from "@/lib/gradeIgboSentence";
 import { gradeIgboSentence } from "@/lib/gradeIgboSentence";
 
@@ -25,7 +25,7 @@ async function fetchSpeakingFeedback(
 
   const response = await fetch(`${supabaseUrl}/functions/v1/speaking-feedback`, {
     method: "POST",
-    headers: supabaseFunctionHeaders(),
+    headers: await userFunctionAuthHeaders(true),
     body: JSON.stringify(input),
   });
 

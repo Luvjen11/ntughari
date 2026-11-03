@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,7 +38,15 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Feedback from "./pages/Feedback";
 import AdminFeedback from "./pages/admin/AdminFeedback";
+import AdminProverbs from "./pages/admin/AdminProverbs";
+import AdminDialects from "./pages/admin/AdminDialects";
+import AdminAudio from "./pages/admin/AdminAudio";
+import Proverbs from "./pages/Proverbs";
+import FinishProverbPractice from "./pages/practice/FinishProverbPractice";
 import NotFound from "./pages/NotFound";
+
+// The map pulls in Leaflet, so it loads only when someone opens it.
+const DialectMap = lazy(() => import("./pages/DialectMap"));
 
 const queryClient = new QueryClient();
 
@@ -62,6 +71,15 @@ const App = () => (
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/skeletons" element={<Skeletons />} />
             <Route path="/phrases" element={<Phrases />} />
+            <Route path="/proverbs" element={<Proverbs />} />
+            <Route
+              path="/dialects"
+              element={
+                <Suspense fallback={<div className="p-8 text-center font-display">Loading map…</div>}>
+                  <DialectMap />
+                </Suspense>
+              }
+            />
             <Route path="/auth" element={<Auth />} />
             <Route path="/practice" element={<PracticeHub />} />
             <Route path="/practice/my-words" element={<MyWords />} />
@@ -71,11 +89,15 @@ const App = () => (
             <Route path="/practice/translation" element={<TranslationPractice />} />
             <Route path="/practice/fill-gap" element={<FillGapPractice />} />
             <Route path="/practice/phrase-rebuild" element={<PhraseRebuildPractice />} />
+            <Route path="/practice/finish-the-proverb" element={<FinishProverbPractice />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="/stories" element={<Stories />} />
             <Route path="/story/:storyId" element={<StoryPlayer />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
+            <Route path="/admin/proverbs" element={<AdminRoute><AdminProverbs /></AdminRoute>} />
+            <Route path="/admin/dialects" element={<AdminRoute><AdminDialects /></AdminRoute>} />
+            <Route path="/admin/audio" element={<AdminRoute><AdminAudio /></AdminRoute>} />
             <Route path="/admin/letters" element={<AdminRoute><AdminLetters /></AdminRoute>} />
             <Route path="/admin/vocabulary" element={<AdminRoute><AdminVocabulary /></AdminRoute>} />
             <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />

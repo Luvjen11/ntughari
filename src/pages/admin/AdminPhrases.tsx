@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { IgboFocusPad } from "@/components/IgboFocusPad";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -35,6 +36,7 @@ type Phrase = {
 };
 
 export default function AdminPhrases() {
+  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -145,7 +147,8 @@ export default function AdminPhrases() {
             <DialogHeader>
               <DialogTitle className="font-display">{editingPhrase ? "Edit Phrase" : "Add Phrase"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+              <IgboFocusPad containerRef={formRef} />
               <div>
                 <Label htmlFor="igbo_phrase">Igbo Phrase</Label>
                 <Input id="igbo_phrase" value={formData.igbo_phrase} onChange={(e) => setFormData({ ...formData, igbo_phrase: e.target.value })} required className="border-2 border-foreground" />

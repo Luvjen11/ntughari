@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Bot, Heart, Languages, MessageSquare, PenLine, Puzzle } from "lucide-react";
+import { ArrowLeft, Bot, Heart, Languages, MessageSquare, PenLine, Puzzle, Quote } from "lucide-react";
 import { buildPracticeUrl, type PracticeSource } from "@/hooks/usePracticeVocabulary";
 
 const practiceTypes = [
@@ -45,6 +45,14 @@ const practiceTypes = [
     description: "Arrange words in the correct order to form Igbo phrases",
     icon: Puzzle,
     path: "/practice/phrase-rebuild",
+    usesVocabulary: false,
+  },
+  {
+    id: "finish-the-proverb",
+    title: "Finish the Proverb",
+    description: "Hear the opening of an Igbo proverb and choose how it ends",
+    icon: Quote,
+    path: "/practice/finish-the-proverb",
     usesVocabulary: false,
   },
   {
