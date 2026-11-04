@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Film, MapPin, Music } from "lucide-react";
+import { ArrowLeft, ChevronDown, ExternalLink, Film, MapPin, Music, Youtube } from "lucide-react";
 import { useCultureItems, type CultureItemWithRegion } from "@/hooks/useCultureItems";
 import { MusicExplainer } from "@/components/culture/MusicExplainer";
 import {
@@ -9,12 +9,54 @@ import {
   linkHost,
   safeUrl,
   tagLabel,
+  youtubeSearchUrl,
   type CultureType,
 } from "@/lib/culture";
 
 const TYPE_ICONS: Record<CultureType, typeof Film> = { film: Film, music: Music, other: Film };
 
+function SongList({ artist, songs }: { artist: string; songs: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex items-center gap-1 text-sm font-display font-semibold hover:text-primary"
+      >
+        Songs to start with ({songs.length})
+        <ChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <ol className="space-y-1.5">
+            {songs.map((song, i) => (
+              <li key={song}>
+                <a
+                  href={youtubeSearchUrl(artist, song)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 rounded-lg border-2 border-foreground bg-background px-3 py-2 hover:bg-muted"
+                >
+                  <span className="font-display font-bold text-muted-foreground tabular-nums w-4">{i + 1}</span>
+                  <span className="flex-1 font-medium">{song}</span>
+                  <Youtube size={18} className="shrink-0 text-red-600" aria-hidden />
+                  <span className="sr-only">(search on YouTube, opens in a new tab)</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p className="text-xs text-muted-foreground">Each one opens a YouTube search in a new tab.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function CultureCard({ item }: { item: CultureItemWithRegion }) {
+  // Empty until the top_songs migration is applied, so guard against it missing.
+  const songs = item.type === "music" ? item.top_songs ?? [] : [];
   const watchUrl = safeUrl(item.where_to_watch_or_listen);
   const sourceUrl = safeUrl(item.source);
   const byline = [item.creator, item.year].filter(Boolean).join(" · ");
@@ -44,6 +86,8 @@ function CultureCard({ item }: { item: CultureItemWithRegion }) {
       </div>
 
       <p>{item.description}</p>
+
+      {songs.length > 0 && <SongList artist={item.title} songs={songs} />}
 
       {item.tags.length > 0 && (
         <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
@@ -122,15 +166,15 @@ export default function Culture() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-3xl space-y-8">
         <Link
-          to="/"
+          to="/culture"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft size={20} />
-          <span className="font-display font-semibold">Back to Home</span>
+          <span className="font-display font-semibold">Back to Culture</span>
         </Link>
 
         <header className="space-y-2">
-          <h1 className="font-display text-3xl md:text-4xl font-bold">Omenala · Culture</h1>
+          <h1 className="font-display text-3xl md:text-4xl font-bold">Films &amp; Music</h1>
           <p className="text-muted-foreground max-w-prose">
             Hear Igbo the way people use it: classic Nollywood and new films, highlife greats
             and today's artists. Each entry says whether it is in Igbo and where to read more.

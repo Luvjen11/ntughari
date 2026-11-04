@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { CULTURE_TYPES, TYPE_LABELS, parseTags, typeLabel, type CultureItem } from "@/lib/culture";
+import { CULTURE_TYPES, TYPE_LABELS, parseSongs, parseTags, typeLabel, type CultureItem } from "@/lib/culture";
 
 const EMPTY_FORM = {
   type: "film",
@@ -37,6 +37,7 @@ const EMPTY_FORM = {
   igbo_language: false,
   where_to_watch_or_listen: "",
   tags: "",
+  top_songs: "",
   region_slug: "",
   source: "",
   reviewed: false,
@@ -57,6 +58,7 @@ function toRow(data: FormData) {
     igbo_language: data.igbo_language,
     where_to_watch_or_listen: data.where_to_watch_or_listen.trim() || null,
     tags: parseTags(data.tags),
+    top_songs: data.type === "music" ? parseSongs(data.top_songs) : [],
     region_slug: data.region_slug || null,
     source: data.source.trim() || null,
     reviewed: data.reviewed,
@@ -135,6 +137,7 @@ export default function AdminCulture() {
       igbo_language: item.igbo_language,
       where_to_watch_or_listen: item.where_to_watch_or_listen ?? "",
       tags: item.tags.join(", "),
+      top_songs: (item.top_songs ?? []).join("\n"),
       region_slug: item.region_slug ?? "",
       source: item.source ?? "",
       reviewed: item.reviewed,
@@ -214,6 +217,13 @@ export default function AdminCulture() {
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" value={formData.description} onChange={(e) => set("description", e.target.value)} required className="border-2 border-foreground" rows={3} />
               </div>
+              {formData.type === "music" && (
+                <div>
+                  <Label htmlFor="top_songs">Songs to start with (one per line, up to 5)</Label>
+                  <Textarea id="top_songs" value={formData.top_songs} onChange={(e) => set("top_songs", e.target.value)} className="border-2 border-foreground" rows={5} placeholder={"Osondi Owendi\nOnuigbo"} />
+                  <p className="text-xs text-muted-foreground mt-1">Song titles only. Learners get a YouTube search for the artist and each title.</p>
+                </div>
+              )}
               <div>
                 <Label htmlFor="where_to_watch_or_listen">Where to watch or listen (optional)</Label>
                 <Input id="where_to_watch_or_listen" type="url" value={formData.where_to_watch_or_listen} onChange={(e) => set("where_to_watch_or_listen", e.target.value)} className="border-2 border-foreground" placeholder="https://… official channel, streaming page or label" />

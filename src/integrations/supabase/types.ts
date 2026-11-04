@@ -28,6 +28,7 @@ export type Database = {
           source: string | null
           tags: string[]
           title: string
+          top_songs: string[]
           type: string
           where_to_watch_or_listen: string | null
           year: number | null
@@ -45,6 +46,7 @@ export type Database = {
           source?: string | null
           tags?: string[]
           title: string
+          top_songs?: string[]
           type: string
           where_to_watch_or_listen?: string | null
           year?: number | null
@@ -62,6 +64,7 @@ export type Database = {
           source?: string | null
           tags?: string[]
           title?: string
+          top_songs?: string[]
           type?: string
           where_to_watch_or_listen?: string | null
           year?: number | null
